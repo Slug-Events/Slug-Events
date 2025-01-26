@@ -15,7 +15,6 @@ export default function LoginButton() {
       </button>
     );
   }
-
   return (
     <button 
       onClick={() => signIn('google', { callbackUrl: '/maps' })}

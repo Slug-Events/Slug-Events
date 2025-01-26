@@ -9,17 +9,24 @@ const handler = NextAuth({
     }),
   ],
   pages: {
-    signOut: '/',
+    signOut: "/",
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url
-      return baseUrl
-    }
-  }
+      // Handle redirection after sign-in
+      if (url === baseUrl || url === `${baseUrl}/api/auth/callback/google`) {
+        return baseUrl + "/map"; // Redirect to /map after login
+      }
+
+      // Handle redirection after sign-out or other cases
+      return url.startsWith(baseUrl) ? url : baseUrl;
+    },
+    async session({ session, token, user }) {
+      // Attach additional properties to the session object
+      session.user.id = token.sub;
+      return session;
+    },
+  },
 });
 
 export { handler as GET, handler as POST };

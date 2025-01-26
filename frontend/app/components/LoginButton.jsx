@@ -18,7 +18,8 @@ export default function LoginButton() {
 
   return (
     <button 
-      onClick={() => signIn('google')}
+      onClick={() => signIn('google', { callbackUrl: '/maps' })}
+
       className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg text-blue-600 hover:bg-gray-100 transition-colors duration-200"
     >
       <svg

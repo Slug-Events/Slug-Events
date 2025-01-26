@@ -6,24 +6,20 @@ const handler = NextAuth({
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      authorization: {
-        params: {
-          prompt: "select_account"
-        }
-      }
     }),
   ],
+  pages: {
+    signOut: '/',
+  },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      return baseUrl + "/map";  // Redirect to map page after login
-    },
-    async session({ session, token, user }) {
-      // Send properties to the client
-      session.user.id = token.sub;
-      return session;
-    },
-  },
-  secret: process.env.NEXTAUTH_SECRET,
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
+    }
+  }
 });
 
 export { handler as GET, handler as POST };

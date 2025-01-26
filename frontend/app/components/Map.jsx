@@ -2,6 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useSession, signOut } from "next-auth/react";
+import { useRouter } from 'next/navigation';
 import { 
   GoogleMap, 
   LoadScript, 
@@ -13,12 +14,20 @@ const libraries = ['places'];
 
 export default function Map() {
   const { data: session } = useSession();
+  const router = useRouter();
   const [markers, setMarkers] = useState([]);
   const autocompleteRef = useRef(null);
 
+  const handleSignOut = async () => {
+    await signOut({ 
+      redirect: true,
+      callbackUrl: '/' 
+    });
+    router.push('/');
+  };
+
   return (
     <div className="h-screen flex flex-col">
-      {/* Navigation Bar */}
       <nav className="bg-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
@@ -32,7 +41,7 @@ export default function Map() {
                 </span>
               )}
               <button
-                onClick={() => signOut({ callbackUrl: '/' })}
+                onClick={handleSignOut}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Sign Out
@@ -42,7 +51,6 @@ export default function Map() {
         </div>
       </nav>
 
-      {/* Map Content */}
       <div className="flex-1">
         <LoadScript
           googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}

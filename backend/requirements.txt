@@ -1,7 +1,14 @@
-# Backend dependencies
-Flask==3.0.3
-
-# Development tools
-pylint==3.3.3
+annotated-types==0.7.0
+anyio==4.8.0
+appnope==0.1.4
 astroid==3.3.8
+asttokens==2.4.1
+Authlib==1.4.0
 black==23.1.0
+Flask==3.0.3
+Flask-Cors==5.0.0
+Flask-Session==0.8.0
+google-auth==2.38.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1
+pylint==3.3.3

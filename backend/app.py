@@ -1,7 +1,13 @@
-import jwt
+"""
+app.py
+
+Flask backend for handling Google OAuth, database updates
+"""
+
 import os
 import secrets
 from datetime import datetime, timedelta
+import jwt
 from flask import Flask, redirect, url_for, session, request
 from flask_cors import CORS
 from google.oauth2 import id_token
@@ -28,6 +34,7 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 
 def get_google_flow():
+    """Gets google login flow using env variables"""
     return Flow.from_client_config(
         {
             "web": {
@@ -48,17 +55,12 @@ def get_google_flow():
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-
-@app.route("/")
-def index():
-    user = session.get("user")
-    if user:
-        return f"<h1>Welcome {user['name']}!</h1> <a href='/logout'>Logout</a>"
-    return "<h1>Welcome to the Google OAuth App!</h1> <a href='/login'>Login with Google</a>"
-
-
 @app.route("/login")
 def login():
+    """
+    Login endpoint for users
+    Redirects to Google OAuth
+    """
     next_url = request.args.get("next", "/")
     session["next"] = next_url
     session["nonce"] = secrets.token_urlsafe(16)
@@ -78,6 +80,12 @@ def login():
 
 @app.route("/authorize")
 def authorize():
+    """
+    Callback endpoint for Google OAuth
+    Authorizes user
+    Returns:
+        Cookie containing user info
+    """
     state = session.pop("state", None)
     if not state or state != request.args.get("state"):
         return "Invalid state parameter", 400
@@ -124,6 +132,10 @@ def authorize():
 
 @app.route("/logout")
 def logout():
+    """
+    Logout endpoint
+    Clears sessions and resets users login cookie
+    """
     session.clear()
     response = redirect(url_for("index"))
     response.set_cookie("session", "", expires=0)

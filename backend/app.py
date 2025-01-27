@@ -14,8 +14,12 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
 
 app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID", "your-client-id")
-app.config["GOOGLE_CLIENT_SECRET"] = os.getenv("GOOGLE_CLIENT_SECRET", "your-client-secret")
-app.config["GOOGLE_REDIRECT_URI"] = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/authorize")
+app.config["GOOGLE_CLIENT_SECRET"] = os.getenv(
+    "GOOGLE_CLIENT_SECRET", "your-client-secret"
+)
+app.config["GOOGLE_REDIRECT_URI"] = os.getenv(
+    "GOOGLE_REDIRECT_URI", "http://localhost:8080/authorize"
+)
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
@@ -35,10 +39,17 @@ def get_google_flow():
                 "redirect_uris": [app.config["GOOGLE_REDIRECT_URI"]],
             }
         },
-        scopes=["https://www.googleapis.com/auth/userinfo.email", "https://www.googleapis.com/auth/userinfo.profile", "openid"],
+        scopes=[
+            "https://www.googleapis.com/auth/userinfo.email",
+            "https://www.googleapis.com/auth/userinfo.profile",
+            "openid",
+        ],
     )
 
+
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+
 @app.route("/")
 def index():
     user = session.get("user")
@@ -102,7 +113,7 @@ def authorize():
                 "email": id_info.get("email"),
                 "picture": id_info.get("picture"),
             },
-            "exp": datetime.utcnow() + timedelta(hours=1),
+            "exp": datetime.now() + timedelta(hours=1),
         },
         SECRET_KEY,
         algorithm="HS256",

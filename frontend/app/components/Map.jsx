@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { jwtDecode } from 'jwt-decode';
+import {jwtDecode} from 'jwt-decode';
 import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
 
 const libraries = ['places'];
@@ -14,41 +14,42 @@ export default function Map() {
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
-    const token = queryParams.get('token');
+    const token = queryParams.get('token') || localStorage.getItem('token');
+
     if (token) {
       try {
-        // Decode the JWT to extract user information
         const decoded = jwtDecode(token);
-        setUser(decoded.user); // Assuming the user info is in the 'user' field
+        setUser(decoded.user);
+
+        localStorage.setItem('token', token);
       } catch (error) {
         console.error('Failed to decode token:', error);
+        localStorage.removeItem('token');
+        router.push('/');
       }
-      // Clear the token from the URL
-      window.history.replaceState(null, '', window.location.pathname);
+
+      if (queryParams.get('token')) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
     } else {
-      setUser(null); // Clear user state
-      router.push('/'); // Redirect to login if token is not found
+      setUser(null);
+      router.push('/');
     }
   }, [router]);
 
   const handleSignOut = async () => {
     try {
-      // Clear backend session
       await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/logout`, {
         credentials: 'include',
       });
-      // Clear local state
       setUser(null);
-      // Clear localStorage and sessionStorage (if used)
-      localStorage.clear();
+      localStorage.removeItem('token');
       sessionStorage.clear();
-      // Redirect to login page
       router.push('/');
     } catch (error) {
       console.error('Error during sign out:', error);
     }
   };
-  
 
   return (
     <div className="h-screen flex flex-col">

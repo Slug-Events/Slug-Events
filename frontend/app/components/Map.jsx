@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {jwtDecode} from 'jwt-decode';
-import { GoogleMap, LoadScript, Marker } from '@react-google-maps/api';
+import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
 
 const libraries = ['places'];
 
@@ -11,6 +11,8 @@ export default function Map() {
   const router = useRouter();
   const [markers, setMarkers] = useState([]);
   const [user, setUser] = useState(null);
+  const [mapCenter, setMapCenter] = useState(center);
+  const autocompleteRef = useRef(null);
 
   useEffect(() => {
     const queryParams = new URLSearchParams(window.location.search);
@@ -51,6 +53,20 @@ export default function Map() {
     }
   };
 
+  const handlePlaceChanged = () => {
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place && place.geometry && place.geometry.location) {
+        const location = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        };
+        setMarkers((prevMarkers) => [...prevMarkers, location]);
+        setMapCenter(location);
+      }
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col">
       <nav className="bg-white shadow-lg">
@@ -76,24 +92,44 @@ export default function Map() {
         </div>
       </nav>
 
-      <div className="flex-1">
+      <div className="flex-1 relative">
         <LoadScript
           googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
           libraries={libraries}
         >
+          <div className="absolute top-4 right-4 z-10 w-96">
+            <Autocomplete
+              onLoad={(autocomplete) => {
+                autocompleteRef.current = autocomplete;
+              }}
+              onPlaceChanged={handlePlaceChanged}
+            >
+              <input
+                type="text"
+                placeholder="Search for a location"
+                className="w-full px-4 py-2 rounded-lg border shadow-sm text-gray-700"
+              />
+            </Autocomplete>
+          </div>
           <GoogleMap
             mapContainerStyle={mapContainerStyle}
-            center={center}
+            center={mapCenter}
             zoom={13}
             onClick={(e) => {
-              setMarkers([...markers, {
-                lat: e.latLng.lat(),
-                lng: e.latLng.lng()
-              }]);
+              setMarkers((prevMarkers) => [
+                ...prevMarkers,
+                {
+                  lat: e.latLng.lat(),
+                  lng: e.latLng.lng(),
+                },
+              ]);
             }}
           >
             {markers.map((marker, index) => (
-              <Marker key={index} position={marker} />
+              <Marker
+                key={index}
+                position={{ lat: marker.lat, lng: marker.lng }}
+              />
             ))}
           </GoogleMap>
         </LoadScript>

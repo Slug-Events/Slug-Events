@@ -74,7 +74,7 @@ def login():
         state=session["nonce"],
     )
     session["state"] = state
-    print(f"Generated state: {state}, nonce: {session['nonce']}")
+    # print(f"Generated state: {state}, nonce: {session['nonce']}")
     return redirect(authorization_url)
 
 
@@ -112,7 +112,8 @@ def authorize():
         "email": id_info.get("email"),
         "picture": id_info.get("picture"),
     }
-
+    cookie_expiration = datetime.now() + timedelta(hours=1)
+    print(f"Cookie expires on: {cookie_expiration}")
     jwt_token = jwt.encode(
         {
             "user": {
@@ -120,7 +121,7 @@ def authorize():
                 "email": id_info.get("email"),
                 "picture": id_info.get("picture"),
             },
-            "exp": datetime.now() + timedelta(hours=1),
+            "exp": cookie_expiration,
         },
         SECRET_KEY,
         algorithm="HS256",

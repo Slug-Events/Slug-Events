@@ -6,7 +6,6 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
-from datetime import datetime, timedelta
 import jwt
 from flask import Flask, redirect, url_for, session, request
 from flask_cors import CORS

@@ -55,6 +55,7 @@ def get_google_flow():
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
+
 @app.route("/login")
 def login():
     """

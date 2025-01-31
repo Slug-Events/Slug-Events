@@ -1,29 +1,70 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { useSession, signOut } from "next-auth/react";
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  GoogleMap, 
-  LoadScript, 
-  Marker,
-  Autocomplete 
-} from '@react-google-maps/api';
+import {jwtDecode} from 'jwt-decode';
+import { GoogleMap, LoadScript, Marker, Autocomplete } from '@react-google-maps/api';
 
 const libraries = ['places'];
 
 export default function Map() {
-  const { data: session } = useSession();
   const router = useRouter();
   const [markers, setMarkers] = useState([]);
+  const [user, setUser] = useState(null);
+  const [mapCenter, setMapCenter] = useState(center);
   const autocompleteRef = useRef(null);
 
+  useEffect(() => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const token = queryParams.get('token') || localStorage.getItem('token');
+
+    if (token) {
+      try {
+        const decoded = jwtDecode(token);
+        setUser(decoded.user);
+
+        localStorage.setItem('token', token);
+      } catch (error) {
+        console.error('Failed to decode token:', error);
+        localStorage.removeItem('token');
+        router.push('/');
+      }
+
+      if (queryParams.get('token')) {
+        window.history.replaceState(null, '', window.location.pathname);
+      }
+    } else {
+      setUser(null);
+      router.push('/');
+    }
+  }, [router]);
+
   const handleSignOut = async () => {
-    await signOut({ 
-      redirect: true,
-      callbackUrl: '/' 
-    });
-    router.push('/');
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/logout`, {
+        credentials: 'include',
+      });
+      setUser(null);
+      localStorage.removeItem('token');
+      sessionStorage.clear();
+      router.push('/');
+    } catch (error) {
+      console.error('Error during sign out:', error);
+    }
+  };
+
+  const handlePlaceChanged = () => {
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place && place.geometry && place.geometry.location) {
+        const location = {
+          lat: place.geometry.location.lat(),
+          lng: place.geometry.location.lng(),
+        };
+        setMarkers((prevMarkers) => [...prevMarkers, location]);
+        setMapCenter(location);
+      }
+    }
   };
 
   return (
@@ -35,9 +76,9 @@ export default function Map() {
               <span className="text-xl font-bold text-blue-600">Slug Events</span>
             </div>
             <div className="flex items-center gap-4">
-              {session?.user?.email && (
+              {user && (
                 <span className="text-gray-600">
-                  {session.user.email}
+                  Welcome, {user.name || user.email}
                 </span>
               )}
               <button
@@ -51,57 +92,46 @@ export default function Map() {
         </div>
       </nav>
 
-      <div className="flex-1">
+      <div className="flex-1 relative">
         <LoadScript
           googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
           libraries={libraries}
         >
-          <div className="relative w-full h-full">
-            <div className="absolute top-4 left-4 z-10 w-96">
-              <Autocomplete
-                onLoad={(autocomplete) => {
-                  autocompleteRef.current = autocomplete;
-                }}
-                onPlaceChanged={() => {
-                  if (autocompleteRef.current) {
-                    const place = autocompleteRef.current.getPlace();
-                    if (place && place.geometry && place.geometry.location) {
-                      const location = {
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng()
-                      };
-                      setMarkers([...markers, location]);
-                    }
-                  }
-                }}
-              >
-                <input
-                  type="text"
-                  placeholder="Search for a location"
-                  className="w-full px-4 py-2 rounded-lg border shadow-sm"
-                />
-              </Autocomplete>
-            </div>
-
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={center}
-              zoom={13}
-              onClick={(e) => {
-                setMarkers([...markers, {
-                  lat: e.latLng.lat(),
-                  lng: e.latLng.lng()
-                }]);
+          <div className="absolute top-4 right-4 z-10 w-96">
+            <Autocomplete
+              onLoad={(autocomplete) => {
+                autocompleteRef.current = autocomplete;
               }}
+              onPlaceChanged={handlePlaceChanged}
             >
-              {markers.map((marker, index) => (
-                <Marker
-                  key={index}
-                  position={{ lat: marker.lat, lng: marker.lng }}
-                />
-              ))}
-            </GoogleMap>
+              <input
+                type="text"
+                placeholder="Search for a location"
+                className="w-full px-4 py-2 rounded-lg border shadow-sm text-gray-700"
+              />
+            </Autocomplete>
           </div>
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={mapCenter}
+            zoom={13}
+            onClick={(e) => {
+              setMarkers((prevMarkers) => [
+                ...prevMarkers,
+                {
+                  lat: e.latLng.lat(),
+                  lng: e.latLng.lng(),
+                },
+              ]);
+            }}
+          >
+            {markers.map((marker, index) => (
+              <Marker
+                key={index}
+                position={{ lat: marker.lat, lng: marker.lng }}
+              />
+            ))}
+          </GoogleMap>
         </LoadScript>
       </div>
     </div>
@@ -110,10 +140,10 @@ export default function Map() {
 
 const mapContainerStyle = {
   width: '100%',
-  height: '100%'
+  height: '100%',
 };
 
 const center = {
   lat: 36.9741,
-  lng: -122.0308  // UCSC coordinates
+  lng: -122.0308, // UCSC coordinates
 };

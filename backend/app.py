@@ -12,6 +12,8 @@ from flask_cors import CORS
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
+from dotenv import load_dotenv
+load_dotenv("./.env")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")

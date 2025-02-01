@@ -37,9 +37,9 @@ app.config.update(
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 #Initialize Firebase Admin SDK  
-#cred = credentials.Certificate("./slug-events-firebase-key.json")
-#firebase_admin.initialize_app(cred)
-#db = firestore.client()
+cred = credentials.Certificate("./slug-events-firebase-key.json")
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 
 def get_google_flow():
     """Gets google login flow using env variables"""

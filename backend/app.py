@@ -7,12 +7,15 @@ Flask backend for handling Google OAuth, database updates
 import os
 import secrets
 import jwt
+import firebase_admin
 from flask import Flask, redirect, url_for, session, request
 from flask_cors import CORS
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
+from firebase_admin import credentials, firestore
+
 load_dotenv("./.env")
 
 app = Flask(__name__)
@@ -33,6 +36,10 @@ app.config.update(
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
+#Initialize Firebase Admin SDK  
+#cred = credentials.Certificate("./slug-events-firebase-key.json")
+#firebase_admin.initialize_app(cred)
+#db = firestore.client()
 
 def get_google_flow():
     """Gets google login flow using env variables"""
@@ -140,7 +147,6 @@ def logout():
     response = redirect(url_for("index"))
     response.set_cookie("session", "", expires=0)
     return response
-
 
 if __name__ == "__main__":
     app.run(debug=True)

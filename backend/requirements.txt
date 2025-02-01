@@ -1,5 +1,5 @@
 Authlib==1.4.0
-black>=24.3.0
+black==24.3.0
 Flask==3.0.3
 Flask-Cors==5.0.0
 Flask-Session==0.8.0

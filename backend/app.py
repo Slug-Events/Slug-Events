@@ -8,7 +8,8 @@ import os
 import secrets
 import jwt
 import firebase_admin
-from flask import Flask, redirect, url_for, session, request
+from flask import Flask, redirect, url_for, session, request, jsonify
+from datetime import datetime
 from flask_cors import CORS
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
@@ -40,6 +41,7 @@ SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 cred = credentials.Certificate("./slug-events-firebase-key.json")
 firebase_admin.initialize_app(cred)
 db = firestore.client()
+print(db)
 
 
 def get_google_flow():
@@ -138,6 +140,100 @@ def authorize():
     return redirect(f"{next_url}?token={jwt_token}")
 
 
+@app.route('/create_event', methods=['POST'])
+def create_event():
+    try:
+        # [1] Initial request validation
+        print("\n=== New Event Creation Request ===")
+        print("Headers:", dict(request.headers))
+        print("Raw JSON:", request.data.decode())
+
+        auth_header = request.headers.get('Authorization')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            print("Auth fail: Missing or invalid Authorization header")
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        token = auth_header.split(' ')[1]
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+            user_email = decoded['user']['email']
+            print(f"Authenticated user: {user_email}")
+        except Exception as e:
+            print(f"Token validation failed: {str(e)}")
+            return jsonify({'error': 'Invalid token'}), 401
+        try:
+            event_data = request.get_json()
+            print("Parsed JSON:", event_data)
+        except Exception as e:
+            print(f"JSON parse error: {str(e)}")
+            return jsonify({'error': 'Invalid JSON format'}), 400
+
+        required_fields = ['title', 'description', 'startTime', 'endTime', 'location']
+        missing_fields = [field for field in required_fields if field not in event_data]
+        if missing_fields:
+            print(f"Missing fields: {missing_fields}")
+            return jsonify({'error': f'Missing required fields: {", ".join(missing_fields)}'}), 400
+
+        try:
+            start_time = datetime.fromisoformat(event_data['startTime'])
+            end_time = datetime.fromisoformat(event_data['endTime'])
+            print(f"Validated dates - Start: {start_time}, End: {end_time}")
+            if end_time <= start_time:
+                print("Invalid date range")
+                return jsonify({'error': 'End time must be after start time'}), 400
+        except ValueError as e:
+            print(f"Date validation error: {str(e)}")
+            return jsonify({'error': f'Invalid date format: {str(e)}'}), 400
+
+        try:
+            geo_point = {
+                "latitude":event_data['location']['latitude'],
+                "longitude":event_data['location']['longitude']
+            }
+            print(f"Validated location: {geo_point}")
+        except (KeyError, TypeError) as e:
+            print(f"Location validation error: {str(e)}")
+            return jsonify({'error': 'Invalid location format'}), 400
+
+        try:
+            event_ref = db.collection('events').document()
+            event_data = {
+                'title': event_data['title'],
+                'description': event_data['description'],
+                'startTime': start_time,
+                'endTime': end_time,
+                'location': geo_point,
+                'ownerEmail': user_email,
+                'createdAt': datetime.now(),
+                'status': 'active'
+            }
+            
+            print(f"Attempting Firestore write to document {event_ref.id}")
+            print("Document data:", event_data)
+            
+            event_ref.set(event_data)
+            print(f"events collection{event_ref.get()}")
+            
+            doc = event_ref.get()
+            if doc.exists:
+                print("Firestore write confirmed")
+                return jsonify({
+                    'message': 'Event created successfully',
+                    'eventId': event_ref.id,
+                    'firestoreData': doc.to_dict()
+                }), 201
+            else:
+                print("Firestore write failed silently")
+                return jsonify({'error': 'Document not created'}), 500
+
+        except Exception as e:
+            print(f"Firestore error: {str(e)}")
+            return jsonify({'error': f'Database error: {str(e)}'}), 500
+
+    except Exception as e:
+        print(f"Unexpected error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
+
 @app.route("/logout")
 def logout():
     """
@@ -145,7 +241,7 @@ def logout():
     Clears sessions and resets users login cookie
     """
     session.clear()
-    response = redirect(url_for("index"))
+    response = redirect(url_for("/index"))
     response.set_cookie("session", "", expires=0)
     return response
 

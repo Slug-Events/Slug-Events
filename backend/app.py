@@ -203,6 +203,9 @@ def create_event():
                 'startTime': start_time,
                 'endTime': end_time,
                 'location': geo_point,
+                'category': event_data['category'],
+                'capacity': event_data.get('capacity', None),
+                'age_limit': event_data.get("age_limit", None),
                 'ownerEmail': user_email,
                 'createdAt': datetime.now(),
                 'status': 'active'

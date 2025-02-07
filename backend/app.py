@@ -6,10 +6,10 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
+from datetime import datetime
 import jwt
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
-from datetime import datetime
 from flask_cors import CORS
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
@@ -110,11 +110,11 @@ def authorize():
     flow.redirect_uri = app.config["GOOGLE_REDIRECT_URI"]
 
     flow.fetch_token(authorization_response=request.url)
-    credentials = flow.credentials
+    auth_creds = flow.credentials
 
     try:
         id_info = id_token.verify_oauth2_token(
-            credentials.id_token, Request(), app.config["GOOGLE_CLIENT_ID"]
+            auth_creds.id_token, Request(), app.config["GOOGLE_CLIENT_ID"]
         )
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
@@ -139,11 +139,13 @@ def authorize():
     next_url = session.pop("next", "/")
     return redirect(f"{next_url}?token={jwt_token}")
 
-
+# pylint: disable=too-many-return-statements, too-many-statements, broad-exception-caught
 @app.route("/create_event", methods=["POST"])
 def create_event():
+    """
+    Endpoint to create event in database using request from frontend
+    """
     try:
-        # [1] Initial request validation
         print("\n=== New Event Creation Request ===")
         print("Headers:", dict(request.headers))
         print("Raw JSON:", request.data.decode())
@@ -235,9 +237,8 @@ def create_event():
                     ),
                     201,
                 )
-            else:
-                print("Firestore write failed silently")
-                return jsonify({"error": "Document not created"}), 500
+            print("Firestore write failed silently")
+            return jsonify({"error": "Document not created"}), 500
 
         except Exception as e:
             print(f"Firestore error: {str(e)}")

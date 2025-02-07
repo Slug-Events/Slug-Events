@@ -248,6 +248,9 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/delete_event', methods=['POST'])
+def delete_event():
+    print("Delete event function")
 
 @app.route("/logout")
 def logout():

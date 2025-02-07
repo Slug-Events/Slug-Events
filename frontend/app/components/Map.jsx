@@ -119,6 +119,43 @@ export default function Map() {
     }
   };
 
+  const handleDeleteEvent = async () => {
+    if (!selectedLocation) {
+      alert("Please select a location on the map");
+      return;
+    }
+
+    if (!user?.email) {
+      alert("User email not found. Please sign in again.");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            ...formData,
+            location: {
+              latitude: selectedLocation.lat,
+              longitude: selectedLocation.lng,
+            },
+            host: user.email,
+          }),
+        }
+      );
+    } catch (error) {
+      alert(error.message);
+    }
+    alert(selectedLocation.lat);
+    return;
+  }
+
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
@@ -416,6 +453,12 @@ export default function Map() {
                         {selectedEvent.category}
                       </span>
                     </div>
+                    <button
+                    onClick={handleDeleteEvent}
+                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                    >
+                      Delete Event
+                    </button>
                   </div>
                 </div>
               </InfoWindow>

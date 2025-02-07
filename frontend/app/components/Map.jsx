@@ -29,7 +29,8 @@ export default function Map() {
     endTime: "",
     category: "general",
     address: "",
-    capacity: 100
+    capacity: 100,
+    ageLimit: 0
   });
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);

@@ -340,9 +340,9 @@ def get_state():
         for event in events:
             event_obj = event.to_dict()
             event_obj["eventId"] = event.id
-            rsvps_ref = event.reference.collection("rsvps")
-            rsvps = rsvps_ref.stream()
-            event_obj["rsvps"] = [doc.get("email") for doc in rsvps]
+            # rsvps_ref = event.reference.collection("rsvps")
+            # rsvps = rsvps_ref.stream()
+            # event_obj["rsvps"] = [doc.get("email") for doc in rsvps]
             
             state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})

@@ -1,16 +1,19 @@
-'use client';
+"use client";
 
-import { useState, useRef } from 'react';
-import { useSession, signOut } from "next-auth/react";
-import { useRouter } from 'next/navigation';
-import { 
-  GoogleMap, 
-  LoadScript, 
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { jwtDecode } from "jwt-decode";
+import {
+  GoogleMap,
+  LoadScript,
   Marker,
-  Autocomplete 
-} from '@react-google-maps/api';
+  InfoWindow,
+  Autocomplete,
+} from "@react-google-maps/api";
 
-const libraries = ['places'];
+const libraries = ["places"];
+const mapContainerStyle = { width: "100%", height: "100%" };
+const center = { lat: 36.9741, lng: -122.0308 };
 
 export default function Map() {
   const router = useRouter();
@@ -176,32 +179,79 @@ export default function Map() {
     }));
   };
 
-  return (
-    <div className="h-screen flex flex-col">
-      <nav className="bg-white shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16 items-center">
-            <div className="flex-shrink-0">
-              <span className="text-xl font-bold text-blue-600">Slug Events</span>
-            </div>
-            <div className="flex items-center gap-4">
-              {session?.user?.email && (
-                <span className="text-gray-600">
-                  {session.user.email}
-                </span>
-              )}
-              <button
-                onClick={handleSignOut}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+  const handleSignOut = () => {
+    localStorage.removeItem("token");
+    router.push("/");
+  };
 
-      <div className="flex-1">
+  const handleMapClick = async (e) => {
+    if (!showCreateForm) return;
+
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    updateFormLocation(lat, lng);
+  };
+
+  const updateFormLocation = (lat, lng) => {
+    setSelectedLocation({ lat, lng });
+
+    geocoder.current.geocode({ location: { lat, lng } }, (results, status) => {
+      if (status === "OK" && results[0]) {
+        setFormData((prev) => ({
+          ...prev,
+          address: results[0].formatted_address,
+        }));
+      }
+    });
+  };
+
+  const handleCreateButtonClick = () => {
+    setShowCreateForm(true);
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter();
+      updateFormLocation(center.lat(), center.lng());
+    }
+  };
+
+  const handlePlaceSelect = () => {
+    if (autocompleteRef.current) {
+      const place = autocompleteRef.current.getPlace();
+      if (place?.geometry?.location) {
+        updateFormLocation(
+          place.geometry.location.lat(),
+          place.geometry.location.lng()
+        );
+      }
+    }
+  };
+
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-50">
+      <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
+        <div className="flex items-center space-x-6">
+          <h1 className="text-2xl font-bold text-gray-800">
+            <span className="text-blue-600">Slug Events</span>
+          </h1>
+          <button
+            onClick={handleCreateButtonClick}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Create Event
+          </button>
+        </div>
+        <div className="flex items-center gap-4">
+          <span className="text-gray-600">Welcome, {user?.name}</span>
+          <button
+            onClick={handleSignOut}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Sign Out
+          </button>
+        </div>
+      </header>
+
+      <div className="flex-1 relative">
         <LoadScript
           googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
           libraries={libraries}
@@ -437,13 +487,3 @@ export default function Map() {
     </div>
   );
 }
-
-const mapContainerStyle = {
-  width: '100%',
-  height: '100%'
-};
-
-const center = {
-  lat: 36.9741,
-  lng: -122.0308  // UCSC coordinates
-};

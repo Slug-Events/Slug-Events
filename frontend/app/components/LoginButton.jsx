@@ -1,24 +1,19 @@
-'use client';
-
-import { signIn, signOut, useSession } from "next-auth/react";
+"use client";
 
 export default function LoginButton() {
-  const { data: session } = useSession();
-
-  if (session) {
-    return (
-      <button
-        onClick={() => signOut()}
-        className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg text-blue-600 hover:bg-gray-100 transition-colors duration-200"
-      >
-        Sign out
-      </button>
-    );
-  }
+  const handleLogin = () => {
+    const backendUrl = process.env.NEXT_PUBLIC_LOGIN_URL;
+    if (!backendUrl) {
+      console.error("Environment variable REACT_APP_LOGIN_URL is not defined.");
+      return;
+    }
+    const nextUrl = `${window.location.origin}/map`;
+    window.location.href = `${backendUrl}?next=${encodeURIComponent(nextUrl)}`;
+  };
 
   return (
-    <button 
-      onClick={() => signIn('google')}
+    <button
+      onClick={handleLogin}
       className="flex items-center gap-2 bg-white px-4 py-2 rounded-lg text-blue-600 hover:bg-gray-100 transition-colors duration-200"
     >
       <svg
@@ -43,7 +38,7 @@ export default function LoginButton() {
           fill="#EA4335"
         />
       </svg>
-      Sign in
+      Sign in with Google
     </button>
   );
 }

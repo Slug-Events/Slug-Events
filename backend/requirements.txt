@@ -1,7 +1,12 @@
-# Backend dependencies
+Authlib==1.4.0
+black>=24.3.0
 Flask==3.0.3
-
-# Development tools
+Flask-Cors==5.0.0
+Flask-Session==0.8.0
+google-auth==2.38.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.1
 pylint==3.3.3
-astroid==3.3.8
-black==23.1.0
+PyJWT==2.10.1
+python-dotenv==1.0.1
+firebase-admin==6.6.0

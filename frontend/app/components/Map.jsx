@@ -134,7 +134,7 @@ export default function Map() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event/${selectedEvent}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event/${selectedEvent.eventId}`,
         {
           method: "DELETE",
           headers: {
@@ -149,10 +149,11 @@ export default function Map() {
           (await response.json()).error || "Failed to delete event"
         );
     } catch (error) {
+      alert(selectedEvent.eventId);
       alert(error.message);
+      
     }
-    alert("Pressed ");
-    console.log("Selected Event:", selectedEvent);
+    alert("return")
     return;
   }
 

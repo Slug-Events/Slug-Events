@@ -248,6 +248,16 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route("/state")
+def get_state():
+    state = {"events": []}
+    events = db.collection("events").stream()
+    for event in events:
+        event_obj = event._data
+        event_obj["eventId"] = event.id
+        state["events"].append(event_obj)
+    return {"status": 200, "state": state}
+
 
 @app.route("/logout")
 def logout():

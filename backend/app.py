@@ -116,7 +116,6 @@ def authorize():
         id_info = id_token.verify_oauth2_token(
             auth_creds.id_token, Request(), app.config["GOOGLE_CLIENT_ID"], clock_skew_in_seconds=10
         )
-
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
 
@@ -210,6 +209,7 @@ def create_event():
                 "description": event_data["description"],
                 "startTime": start_time,
                 "endTime": end_time,
+                "address": event_data["address"],
                 "location": geo_point,
                 "category": event_data["category"],
                 "capacity": event_data.get("capacity", None),
@@ -249,6 +249,106 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route("/rsvp/<event_id>", methods=["POST"])
+def rsvp_event(event_id):
+    """Endpoint to RSVP to an event"""
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            user_email = decoded["user"]["email"]
+        except Exception as e:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Add RSVP to the event's subcollection
+        rsvp_ref = db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        rsvp_data = {
+            "email": user_email,
+            "timestamp": datetime.now(),
+            "status": "confirmed"
+        }
+        rsvp_ref.set(rsvp_data)
+
+        return jsonify({"message": "RSVP successful"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/unrsvp/<event_id>", methods=["DELETE"])
+def unrsvp_event(event_id):
+    """Endpoint to remove RSVP from an event"""
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            user_email = decoded["user"]["email"]
+        except Exception as e:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Remove RSVP from the event's subcollection
+        rsvp_ref = db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        rsvp_ref.delete()
+
+        return jsonify({"message": "RSVP removed successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/rsvps/<event_id>", methods=["GET"])
+def get_event_rsvps(event_id):
+    """Endpoint to get all RSVPs for an event"""
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        except Exception as e:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Get all RSVPs for the event
+        rsvps_ref = db.collection("events").document(event_id).collection("rsvps")
+        rsvps = rsvps_ref.stream()
+        
+        rsvp_list = [doc.get("email") for doc in rsvps]
+        
+        return jsonify(rsvp_list), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/state")
+def get_state():
+    """Endpoint to retrieve map state from db with RSVPs"""
+    try:
+        state = {"events": []}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            event_obj["eventId"] = event.id
+            rsvps_ref = event.reference.collection("rsvps")
+            rsvps = rsvps_ref.stream()
+            event_obj["rsvps"] = [doc.get("email") for doc in rsvps]
+            
+            state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+
+    except Exception as e:
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/logout")
 def logout():

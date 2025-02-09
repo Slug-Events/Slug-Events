@@ -94,6 +94,7 @@ export default function Map() {
           (await response.json()).error || "Failed to create event"
         );
 
+      const response_data = await response.json();
       setMarkers((prev) => [
         ...prev,
         {
@@ -101,6 +102,7 @@ export default function Map() {
           lng: selectedLocation.lng,
           ...formData,
           host: user.email,
+          eventId: response_data.eventId
         },
       ]);
 
@@ -199,6 +201,7 @@ export default function Map() {
       }
     }
   };
+
 
   return (
     <div className="h-screen flex flex-col bg-gray-50">

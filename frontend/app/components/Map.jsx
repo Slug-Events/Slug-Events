@@ -132,27 +132,25 @@ export default function Map() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event/${selectedEvent}`,
         {
-          method: "POST",
+          method: "DELETE",
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
           },
-          body: JSON.stringify({
-            ...formData,
-            location: {
-              latitude: selectedLocation.lat,
-              longitude: selectedLocation.lng,
-            },
-            host: user.email,
-          }),
         }
       );
+
+      if (!response.ok)
+        throw new Error(
+          (await response.json()).error || "Failed to delete event"
+        );
     } catch (error) {
       alert(error.message);
     }
-    alert(selectedLocation.lat);
+    alert("Pressed ");
+    console.log("Selected Event:", selectedEvent);
     return;
   }
 

@@ -114,8 +114,9 @@ def authorize():
 
     try:
         id_info = id_token.verify_oauth2_token(
-            auth_creds.id_token, Request(), app.config["GOOGLE_CLIENT_ID"]
+            auth_creds.id_token, Request(), app.config["GOOGLE_CLIENT_ID"], clock_skew_in_seconds=10
         )
+
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
 

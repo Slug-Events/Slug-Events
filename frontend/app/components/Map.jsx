@@ -119,6 +119,20 @@ export default function Map() {
     }
   };
 
+  const handleRsvp = (eventId) => {
+    setRsvps((prev) => ({
+      ...prev,
+      [eventId]: [...(prev[eventId] || []), user.email],
+    }));
+  };
+
+  const handleUnrsvp = (eventId) => {
+    setRsvps((prev) => ({
+      ...prev,
+      [eventId]: prev[eventId]?.filter((email) => email !== user.email),
+    }));
+  };
+
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");

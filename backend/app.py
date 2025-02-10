@@ -263,7 +263,7 @@ def delete_event(event_id):
     except Exception as e:
         print("delete event func fail")
         return jsonify({"error": str(e)}), 500
-
+      
 @app.route("/state")
 def get_state():
     """Endpoint to retrieve map state from db"""
@@ -278,6 +278,7 @@ def get_state():
 
     except Exception as e:
         return jsonify({"status": 500, "error": str(e)}), 500
+
 
 @app.route("/logout")
 def logout():

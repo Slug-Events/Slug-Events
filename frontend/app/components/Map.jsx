@@ -1,5 +1,6 @@
 "use client";
 
+import RsvpPanel from './RsvpPanel';
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -449,7 +450,7 @@ export default function Map() {
             )}
               {selectedEvent && (
                 <InfoWindow
-                  position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
+                  position={{ lat: selectedEvent.lat + 0.002, lng: selectedEvent.lng }}
                   onCloseClick={() => setSelectedEvent(null)}
                 >
                   <div className="bg-white rounded-lg shadow-lg p-4 min-w-[300px]">
@@ -560,7 +561,10 @@ export default function Map() {
                               </button>
                             )}
                             <button
-                              onClick={() => setShowRsvpList(!showRsvpList)}
+                              onClick={(e) => {
+                                const rect = e.target.getBoundingClientRect();
+                                setShowRsvpList(!showRsvpList);
+                              }}
                               className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
                             >
                               {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
@@ -570,26 +574,17 @@ export default function Map() {
                             {rsvps[selectedEvent.eventId]?.length || 0} attending
                           </span>
                         </div>
-                        
-                        {showRsvpList && (
-                          <div className="mt-2 max-h-32 overflow-y-auto">
-                            <h4 className="text-sm font-medium mb-1">Attendees:</h4>
-                            {rsvps[selectedEvent.eventId]?.length > 0 ? (
-                              <ul className="text-sm text-gray-600 space-y-1">
-                                {rsvps[selectedEvent.eventId].map((email) => (
-                                  <li key={email}>{email}</li>
-                                ))}
-                              </ul>
-                            ) : (
-                              <p className="text-sm text-gray-500">No RSVPs yet</p>
-                            )}
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
                 </InfoWindow>
               )}
+            <RsvpPanel
+              isOpen={showRsvpList}
+              onClose={() => setShowRsvpList(false)}
+              rsvps={rsvps[selectedEvent?.eventId] || []}
+              eventTitle={selectedEvent?.title}
+            />
           </GoogleMap>
         </LoadScript>
       </div>

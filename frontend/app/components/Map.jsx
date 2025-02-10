@@ -161,7 +161,6 @@ export default function Map() {
   };
 
   const handleDeleteEvent = async () => {
-    fetchEvents();
     if (!selectedEvent) {
       alert("Please select a location on the map");
       return;
@@ -188,7 +187,7 @@ export default function Map() {
         throw new Error(
           (await response.json()).error || "Failed to delete event"
         );
-      alert("Event deleted")
+      alert("Event deleted");
       fetchEvents();
     } catch (error) {
       alert(error.message);

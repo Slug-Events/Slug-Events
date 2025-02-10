@@ -187,6 +187,7 @@ export default function Map() {
         throw new Error(
           (await response.json()).error || "Failed to delete event"
         );
+      fetchEvents();
     } catch (error) {
       alert(error.message);
       
@@ -494,7 +495,7 @@ export default function Map() {
                       </span>
                     </div>
                     <button
-                    onClick={handleDeleteEvent}
+                    onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
                     >
                       Delete Event

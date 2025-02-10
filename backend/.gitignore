@@ -1,4 +1,4 @@
 __pycache__
-.env
+.env 
 /flask_session
 slug-events-firebase-key.json

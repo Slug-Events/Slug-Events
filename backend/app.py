@@ -248,6 +248,10 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+# delete an entry in the database
+# called from the frontend software
+# entry to be deleted determined by frontend software
+# backend database operation
 @app.route('/delete_event/<event_id>', methods=['DELETE'])
 def delete_event(event_id):
     try:

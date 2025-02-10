@@ -102,7 +102,7 @@ export default function Map() {
           lng: selectedLocation.lng,
           ...formData,
           host: user.email,
-          eventId: response_data.eventId
+          eventId: response_data.eventId,
         },
       ]);
 
@@ -149,11 +149,10 @@ export default function Map() {
           (await response.json()).error || "Failed to delete event"
         );
     } catch (error) {
-      alert(selectedEvent.eventId);
       alert(error.message);
       
     }
-    alert("return")
+    alert("Event deleted")
     return;
   }
 

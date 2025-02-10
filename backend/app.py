@@ -248,7 +248,7 @@ def create_event():
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
-    
+
 # pylint: disable=too-many-return-statements, too-many-statements, broad-exception-caught
 @app.route("/update_event", methods=["POST"])
 def update_event():

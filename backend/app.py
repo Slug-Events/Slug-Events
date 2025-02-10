@@ -313,7 +313,7 @@ def update_event():
             return jsonify({"error": "Invalid location format"}), 400
 
         try:
-            event_ref = db.collection("events").document()
+            event_ref = db.collection("events").document(event_data["eventId"])
             event_data = {
                 "title": event_data["title"],
                 "description": event_data["description"],

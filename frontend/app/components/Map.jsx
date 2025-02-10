@@ -56,7 +56,45 @@ export default function Map() {
     };
 
     handleToken();
+    fetchEvents();
   }, [router]);
+
+  const fetchEvents = async () => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/state`, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) throw new Error("Failed to fetch events");
+
+      const data = await response.json();
+      if (data.state?.events) {
+        setMarkers(
+          data.state.events.map((event) => ({
+            lat: event.location.latitude,
+            lng: event.location.longitude,
+            title: event.title,
+            description: event.description,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            category: event.category,
+            address: event.address,
+            capacity: event.capacity,
+            ageLimit: event.age_limit,
+            host: event.ownerEmail,
+            eventId: event.eventId,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error fetching events:", error);
+    }
+  };
+
 
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
@@ -116,6 +154,7 @@ export default function Map() {
         address: "",
       });
       alert("Event created successfully!");
+      fetchEvents();
     } catch (error) {
       alert(error.message);
     }

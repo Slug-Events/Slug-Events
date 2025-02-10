@@ -209,6 +209,7 @@ def create_event():
                 "description": event_data["description"],
                 "startTime": start_time,
                 "endTime": end_time,
+                "address": event_data["address"],
                 "location": geo_point,
                 "category": event_data["category"],
                 "capacity": event_data.get("capacity", None),
@@ -248,6 +249,20 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route("/state")
+def get_state():
+    """Endpoint to retrieve map state from db"""
+    try:
+        state = {"events": []}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            event_obj["eventId"] = event.id
+            state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+
+    except Exception as e:
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/logout")
 def logout():

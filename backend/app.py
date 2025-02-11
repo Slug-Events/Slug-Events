@@ -301,7 +301,6 @@ def unrsvp_event(event_id):
         rsvp_ref = (db.collection("events").document(event_id).collection("rsvps")
                     .document(user_email))
         rsvp_ref.delete()
-
         return jsonify({"message": "RSVP removed successfully"}), 200
 
     except Exception as e:

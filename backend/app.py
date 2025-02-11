@@ -249,86 +249,17 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
-@app.route("/rsvp/<event_id>", methods=["POST"])
-def rsvp_event(event_id):
-    """Endpoint to RSVP to an event"""
+@app.route('/delete_event/<event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    """Deletes an event from Firestore given an event_id"""
     try:
-        # Verify authentication
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
-
-        token = auth_header.split(" ")[1]
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
-        except Exception:
-            return jsonify({"error": "Invalid token"}), 401
-
-        # Add RSVP to the event's subcollection
-        rsvp_ref = (db.collection("events").document(event_id).collection("rsvps")
-                    .document(user_email))
-        rsvp_data = {
-            "email": user_email,
-            "timestamp": datetime.now(),
-            "status": "confirmed"
-        }
-        rsvp_ref.set(rsvp_data)
-
-        return jsonify({"message": "RSVP successful"}), 200
-
+        print("delete event func")
+        event_ref = db.collection("events").document(event_id)
+        event_ref.delete()
+        return jsonify({"message": "Event deleted successfully"}), 200
     except Exception as e:
+        print("delete event func fail")
         return jsonify({"error": str(e)}), 500
-
-@app.route("/unrsvp/<event_id>", methods=["DELETE"])
-def unrsvp_event(event_id):
-    """Endpoint to remove RSVP from an event"""
-    try:
-        # Verify authentication
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
-
-        token = auth_header.split(" ")[1]
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
-        except Exception:
-            return jsonify({"error": "Invalid token"}), 401
-
-        # Remove RSVP from the event's subcollection
-        rsvp_ref = (db.collection("events").document(event_id).collection("rsvps")
-                    .document(user_email))
-        rsvp_ref.delete()
-        return jsonify({"message": "RSVP removed successfully"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/rsvps/<event_id>", methods=["GET"])
-def get_event_rsvps(event_id):
-    """Endpoint to get all RSVPs for an event"""
-    try:
-        # Verify authentication
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
-
-        token = auth_header.split(" ")[1]
-        try:
-            jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        except Exception:
-            return jsonify({"error": "Invalid token"}), 401
-
-        # Get all RSVPs for the event
-        rsvps_ref = db.collection("events").document(event_id).collection("rsvps")
-        rsvps = rsvps_ref.stream()
-        rsvp_list = [doc.get("email") for doc in rsvps]
-        return jsonify(rsvp_list), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 
 @app.route("/state")
 def get_state():
@@ -347,6 +278,7 @@ def get_state():
 
     except Exception as e:
         return jsonify({"status": 500, "error": str(e)}), 500
+
 
 @app.route("/logout")
 def logout():

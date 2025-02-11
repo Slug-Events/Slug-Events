@@ -330,11 +330,6 @@ def get_event_rsvps(event_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-
-@app.route("/state")
-def get_state():
-    """Endpoint to retrieve map state from db with RSVPs"""
-
 @app.route('/delete_event/<event_id>', methods=['DELETE'])
 def delete_event(event_id):
     """Deletes an event from Firestore given an event_id"""

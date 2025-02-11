@@ -249,6 +249,18 @@ def create_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route('/delete_event/<event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    """Deletes an event from Firestore given an event_id"""
+    try:
+        print("delete event func")
+        event_ref = db.collection("events").document(event_id)
+        event_ref.delete()
+        return jsonify({"message": "Event deleted successfully"}), 200
+    except Exception as e:
+        print("delete event func fail")
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/state")
 def get_state():
     """Endpoint to retrieve map state from db"""
@@ -263,6 +275,7 @@ def get_state():
 
     except Exception as e:
         return jsonify({"status": 500, "error": str(e)}), 500
+
 
 @app.route("/logout")
 def logout():

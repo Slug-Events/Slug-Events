@@ -492,12 +492,14 @@ export default function Map() {
                         {selectedEvent.category}
                       </span>
                     </div>
-                    <button
-                    onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
-                    >
-                      Delete Event
-                    </button>
+                    {user?.email === selectedEvent?.host && (
+                      <button
+                      onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
+                      className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                      >
+                        Delete Event
+                      </button>
+                    )}  
                   </div>
                 </div>
               </InfoWindow>

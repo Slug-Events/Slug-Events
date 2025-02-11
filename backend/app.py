@@ -334,16 +334,28 @@ def get_event_rsvps(event_id):
 @app.route("/state")
 def get_state():
     """Endpoint to retrieve map state from db with RSVPs"""
+
+@app.route('/delete_event/<event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    """Deletes an event from Firestore given an event_id"""
+    try:
+        print("delete event func")
+        event_ref = db.collection("events").document(event_id)
+        event_ref.delete()
+        return jsonify({"message": "Event deleted successfully"}), 200
+    except Exception as e:
+        print("delete event func fail")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/state")
+def get_state():
+    """Endpoint to retrieve map state from db"""
     try:
         state = {"events": []}
         events = db.collection("events").stream()
         for event in events:
             event_obj = event.to_dict()
             event_obj["eventId"] = event.id
-            # rsvps_ref = event.reference.collection("rsvps")
-            # rsvps = rsvps_ref.stream()
-            # event_obj["rsvps"] = [doc.get("email") for doc in rsvps]
-            
             state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
 

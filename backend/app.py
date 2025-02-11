@@ -38,8 +38,8 @@ app.config.update(
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "slug-events-firebase-key.json"))
+cred = (credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                            "slug-events-firebase-key.json")))
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 print(db)

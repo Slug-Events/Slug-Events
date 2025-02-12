@@ -1,5 +1,6 @@
 "use client";
 
+import RsvpPanel from './RsvpPanel';
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -16,6 +17,8 @@ const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 
 export default function Map() {
+  const [rsvps, setRsvps] = useState({});
+  const [showRsvpList, setShowRsvpList] = useState(false);
   const router = useRouter();
   const [markers, setMarkers] = useState([]);
   const [user, setUser] = useState(null);
@@ -63,13 +66,16 @@ export default function Map() {
 
   const fetchEvents = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/state`, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/state`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       if (!response.ok) throw new Error("Failed to fetch events");
 
@@ -89,6 +95,7 @@ export default function Map() {
             ageLimit: event.age_limit,
             host: event.ownerEmail,
             eventId: event.eventId,
+            rsvps: event.rsvps,
           }))
         );
       }
@@ -96,6 +103,84 @@ export default function Map() {
       console.error("Error fetching events:", error);
     }
   };
+
+  const handleRsvp = async (eventId) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/rsvp/${eventId}`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to RSVP");
+
+      // Update local RSVP state
+      setRsvps((prev) => ({
+        ...prev,
+        [eventId]: [...(prev[eventId] || []), user.email],
+      }));
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleUnrsvp = async (eventId) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/unrsvp/${eventId}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to remove RSVP");
+
+      // Update local RSVP state
+      setRsvps((prev) => ({
+        ...prev,
+        [eventId]: prev[eventId].filter((email) => email !== user.email),
+      }));
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  // Add this effect to fetch RSVPs when an event is selected
+  useEffect(() => {
+    const fetchRsvps = async () => {
+      if (selectedEvent?.eventId) {
+        try {
+          const response = await fetch(
+            `${process.env.NEXT_PUBLIC_BACKEND_URL}/rsvps/${selectedEvent.eventId}`,
+            {
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+
+          if (!response.ok) throw new Error("Failed to fetch RSVPs");
+
+          const rsvpList = await response.json();
+          setRsvps((prev) => ({
+            ...prev,
+            [selectedEvent.eventId]: rsvpList,
+          }));
+        } catch (error) {
+          console.error("Error fetching RSVPs:", error);
+        }
+      }
+    };
+
+    fetchRsvps();
+  }, [selectedEvent]);
 
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
@@ -315,7 +400,6 @@ export default function Map() {
     }
   };
 
-
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
@@ -474,7 +558,7 @@ export default function Map() {
                 </div>
               </InfoWindow>
             )}
-
+            
             {showEditForm && (
               <InfoWindow
                 position={selectedLocation}
@@ -657,28 +741,116 @@ export default function Map() {
                         {selectedEvent.ageLimit || "None"}
                       </span>
                     </div>
-                    {selectedEvent.registration && (
+                    <p className="text-sm text-gray-600 mb-3">
+                      {selectedEvent.description}
+                    </p>
+                    <div className="space-y-1">
                       <div className="flex items-center">
                         <span className="text-xs font-medium text-gray-500 w-20">
-                          Registration:
+                          Address:
                         </span>
-                        <a
-                          href={selectedEvent.registration}
-                          className="text-xs text-blue-600 hover:underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Link
-                        </a>
+                        <span className="text-xs text-gray-700 flex-1">
+                          {selectedEvent.address}
+                        </span>
                       </div>
-                    )}
-                    <div className="flex items-center">
-                      <span className="text-xs font-medium text-gray-500 w-20">
-                        Category:
-                      </span>
-                      <span className="text-xs text-gray-700 capitalize">
-                        {selectedEvent.category}
-                      </span>
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium text-gray-500 w-20">
+                          Host:
+                        </span>
+                        <span className="text-xs text-gray-700 break-all">
+                          {selectedEvent.host}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium text-gray-500 w-20">
+                          Starts:
+                        </span>
+                        <span className="text-xs text-gray-700">
+                          {new Date(selectedEvent.startTime).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium text-gray-500 w-20">
+                          Ends:
+                        </span>
+                        <span className="text-xs text-gray-700">
+                          {new Date(selectedEvent.endTime).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium text-gray-500 w-20">
+                          Capacity:
+                        </span>
+                        <span className="text-xs text-gray-700">
+                          {selectedEvent.capacity || "Unlimited"}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium text-gray-500 w-20">
+                          Age Limit:
+                        </span>
+                        <span className="text-xs text-gray-700">
+                          {selectedEvent.ageLimit || "None"}
+                        </span>
+                      </div>
+                      {selectedEvent.registration && (
+                        <div className="flex items-center">
+                          <span className="text-xs font-medium text-gray-500 w-20">
+                            Registration:
+                          </span>
+                          <a
+                            href={selectedEvent.registration}
+                            className="text-xs text-blue-600 hover:underline"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            Link
+                          </a>
+                        </div>
+                      )}
+                      <div className="flex items-center">
+                        <span className="text-xs font-medium text-gray-500 w-20">
+                          Category:
+                        </span>
+                        <span className="text-xs text-gray-700 capitalize">
+                          {selectedEvent.category}
+                        </span>
+                      </div>
+                      
+                      {/* RSVP Section */}
+                      <div className="mt-4 space-y-2 border-t pt-4">
+                        <div className="flex justify-between items-center">
+                          <div className="space-x-2">
+                            {rsvps[selectedEvent.eventId]?.includes(user?.email) ? (
+                              <button
+                                onClick={() => handleUnrsvp(selectedEvent.eventId)}
+                                className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                              >
+                                Un-RSVP
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleRsvp(selectedEvent.eventId)}
+                                className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
+                              >
+                                RSVP
+                              </button>
+                            )}
+                            <button
+                              onClick={(e) => {
+                                const rect = e.target.getBoundingClientRect();
+                                setShowRsvpList(!showRsvpList);
+                              }}
+                              className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
+                            >
+                              {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
+                            </button>
+                          </div>
+                          <span className="text-sm text-gray-600">
+                            {rsvps[selectedEvent.eventId]?.length || 0} attending
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     {selectedEvent.host == user?.email && (
                       <div className="flex items-center">
@@ -713,9 +885,14 @@ export default function Map() {
                       </button>
                     )}
                   </div>
-                </div>
-              </InfoWindow>
-            )}
+                </InfoWindow>
+              )}
+            <RsvpPanel
+              isOpen={showRsvpList}
+              onClose={() => setShowRsvpList(false)}
+              rsvps={rsvps[selectedEvent?.eventId] || []}
+              eventTitle={selectedEvent?.title}
+            />
           </GoogleMap>
         </LoadScript>
       </div>

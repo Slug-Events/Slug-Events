@@ -17,7 +17,7 @@ from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
 
-load_dotenv("./.env")
+load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
@@ -38,7 +38,7 @@ app.config.update(
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate("./slug-events-firebase-key.json")
+cred = credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"))
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 print(db)
@@ -114,7 +114,7 @@ def authorize():
 
     try:
         id_info = id_token.verify_oauth2_token(
-            auth_creds.id_token, Request(), app.config["GOOGLE_CLIENT_ID"]
+            auth_creds.id_token, Request(), app.config["GOOGLE_CLIENT_ID"], clock_skew_in_seconds=10
         )
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
@@ -248,7 +248,7 @@ def create_event():
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
-
+      
 # pylint: disable=too-many-return-statements, too-many-statements, broad-exception-caught
 @app.route("/update_event", methods=["POST"])
 def update_event():
@@ -263,12 +263,6 @@ def update_event():
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             print("Auth fail: Missing or invalid Authorization header")
-            return jsonify({"error": "Unauthorized"}), 401
-
-        token = auth_header.split(" ")[1]
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
             print(f"Authenticated user: {user_email}")
         except Exception as e:
             print(f"Token validation failed: {str(e)}")
@@ -359,6 +353,87 @@ def update_event():
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
 
+@app.route("/rsvp/<event_id>", methods=["POST"])
+def rsvp_event(event_id):
+    """Endpoint to RSVP to an event"""
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            user_email = decoded["user"]["email"]
+        except Exception as e:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Add RSVP to the event's subcollection
+        rsvp_ref = db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        rsvp_data = {
+            "email": user_email,
+            "timestamp": datetime.now(),
+            "status": "confirmed"
+        }
+        rsvp_ref.set(rsvp_data)
+
+        return jsonify({"message": "RSVP successful"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/unrsvp/<event_id>", methods=["DELETE"])
+def unrsvp_event(event_id):
+    """Endpoint to remove RSVP from an event"""
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            user_email = decoded["user"]["email"]
+        except Exception as e:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Remove RSVP from the event's subcollection
+        rsvp_ref = db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        rsvp_ref.delete()
+
+        return jsonify({"message": "RSVP removed successfully"}), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/rsvps/<event_id>", methods=["GET"])
+def get_event_rsvps(event_id):
+    """Endpoint to get all RSVPs for an event"""
+    try:
+        # Verify authentication
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+        except Exception as e:
+            return jsonify({"error": "Invalid token"}), 401
+
+        # Get all RSVPs for the event
+        rsvps_ref = db.collection("events").document(event_id).collection("rsvps")
+        rsvps = rsvps_ref.stream()
+        
+        rsvp_list = [doc.get("email") for doc in rsvps]
+        
+        return jsonify(rsvp_list), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/delete_event/<event_id>', methods=['DELETE'])
 def delete_event(event_id):
     """Deletes an event from Firestore given an event_id"""
@@ -387,7 +462,6 @@ def get_state():
     except Exception as e:
         return jsonify({"status": 500, "error": str(e)}), 500
 
-
 @app.route("/logout")
 def logout():
     """
@@ -401,4 +475,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host="localhost", port=8080)

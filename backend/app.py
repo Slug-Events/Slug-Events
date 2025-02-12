@@ -38,7 +38,8 @@ app.config.update(
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"))
+cred = credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
+                                            "slug-events-firebase-key.json"))
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 print(db)
@@ -248,7 +249,7 @@ def create_event():
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
-      
+
 # pylint: disable=too-many-return-statements, too-many-statements, broad-exception-caught
 @app.route("/update_event", methods=["POST"])
 def update_event():
@@ -372,11 +373,13 @@ def rsvp_event(event_id):
         try:
             decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
             user_email = decoded["user"]["email"]
-        except Exception as e:
+        except Exception:
             return jsonify({"error": "Invalid token"}), 401
 
         # Add RSVP to the event's subcollection
-        rsvp_ref = db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        rsvp_ref = (
+            db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        )
         rsvp_data = {
             "email": user_email,
             "timestamp": datetime.now(),
@@ -402,11 +405,13 @@ def unrsvp_event(event_id):
         try:
             decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
             user_email = decoded["user"]["email"]
-        except Exception as e:
+        except Exception:
             return jsonify({"error": "Invalid token"}), 401
 
         # Remove RSVP from the event's subcollection
-        rsvp_ref = db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        rsvp_ref = (
+            db.collection("events").document(event_id).collection("rsvps").document(user_email)
+        )
         rsvp_ref.delete()
 
         return jsonify({"message": "RSVP removed successfully"}), 200
@@ -426,15 +431,15 @@ def get_event_rsvps(event_id):
         token = auth_header.split(" ")[1]
         try:
             jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        except Exception as e:
+        except Exception:
             return jsonify({"error": "Invalid token"}), 401
 
         # Get all RSVPs for the event
         rsvps_ref = db.collection("events").document(event_id).collection("rsvps")
         rsvps = rsvps_ref.stream()
-        
+
         rsvp_list = [doc.get("email") for doc in rsvps]
-        
+
         return jsonify(rsvp_list), 200
 
     except Exception as e:

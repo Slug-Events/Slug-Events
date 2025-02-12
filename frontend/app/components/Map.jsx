@@ -20,8 +20,10 @@ export default function Map() {
   const [markers, setMarkers] = useState([]);
   const [user, setUser] = useState(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
+  const [selectedEventId, setSelectedEventId] = useState(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -29,8 +31,8 @@ export default function Map() {
     endTime: "",
     category: "general",
     address: "",
-    capacity: 100,
-    ageLimit: 0
+    capacity: "",
+    ageLimit: ""
   });
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
@@ -94,7 +96,6 @@ export default function Map() {
       console.error("Error fetching events:", error);
     }
   };
-
 
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
@@ -160,9 +161,74 @@ export default function Map() {
     }
   };
 
+  const handleEditEvent = async () => {
+    // if (!selectedLocation) {
+    //   alert("Please select a location on the map");
+    //   return;
+    // }
+
+    // if (!user?.email) {
+    //   alert("User email not found. Please sign in again.");
+    //   return;
+    // }
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/update_event`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify({
+            ...formData,
+            location: {
+              latitude: selectedLocation.lat,
+              longitude: selectedLocation.lng,
+            },
+            host: user.email,
+            eventId: selectedEventId,
+          }),
+        }
+      );
+
+      if (!response.ok)
+        throw new Error(
+          (await response.json()).error || "Failed to update event"
+        );
+
+      const response_data = await response.json();
+      setMarkers((prev) => [
+        ...prev,
+        {
+          lat: selectedLocation.lat,
+          lng: selectedLocation.lng,
+          ...formData,
+          host: user.email,
+          eventId: response_data.eventId,
+        },
+      ]);
+
+      setShowEditForm(false);
+      setSelectedEventId(null);
+      setFormData({
+        title: "",
+        description: "",
+        startTime: "",
+        endTime: "",
+        category: "general",
+        address: "",
+      });
+      alert("Event updated successfully!");
+      fetchEvents();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
   const handleDeleteEvent = async () => {
     if (!selectedEvent) {
-      alert("Please select a location on the map");
+      alert("Please select an event on the map");
       return;
     }
 
@@ -176,6 +242,7 @@ export default function Map() {
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event/${selectedEvent.eventId}`,
         {
           method: "DELETE",
+
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -222,6 +289,14 @@ export default function Map() {
 
   const handleCreateButtonClick = () => {
     setShowCreateForm(true);
+    if (mapRef.current) {
+      const center = mapRef.current.getCenter();
+      updateFormLocation(center.lat(), center.lng());
+    }
+  };
+
+  const handleEditButtonClick = () => {
+    setShowEditForm(true);
     if (mapRef.current) {
       const center = mapRef.current.getCenter();
       updateFormLocation(center.lat(), center.lng());
@@ -400,6 +475,119 @@ export default function Map() {
               </InfoWindow>
             )}
 
+            {showEditForm && (
+              <InfoWindow
+                position={selectedLocation}
+                onCloseClick={() => {
+                  setShowEditForm(false);
+                }}
+              >
+                <div className="bg-white rounded-lg p-4 min-w-[300px] space-y-3">
+                  <h3 className="font-bold text-lg border-b pb-2">
+                    Edit Event
+                  </h3>
+                  <Autocomplete
+                    onLoad={(autocomplete) =>
+                      (autocompleteRef.current = autocomplete)
+                    }
+                    onPlaceChanged={handlePlaceSelect}
+                  >
+                    <input
+                      type="text"
+                      placeholder="Event Address"
+                      className="w-full p-2 border rounded mb-2"
+                      value={formData.address}
+                      onChange={(e) =>
+                        setFormData({ ...formData, address: e.target.value })
+                      }
+                    />
+                  </Autocomplete>
+                  <input
+                    type="text"
+                    placeholder="Event Name"
+                    className="w-full p-2 border rounded mb-2"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="number"
+                      placeholder="Capacity (optional)"
+                      className="p-2 border rounded"
+                      value={formData.capacity}
+                      onChange={(e) =>
+                        setFormData({ ...formData, capacity: e.target.value })
+                      }
+                    />
+                    <input
+                      type="number"
+                      placeholder="Age Limit (optional)"
+                      className="p-2 border rounded"
+                      value={formData.ageLimit}
+                      onChange={(e) =>
+                        setFormData({ ...formData, ageLimit: e.target.value })
+                      }
+                    />
+                  </div>
+                  <input
+                    type="url"
+                    placeholder="Registration URL (optional)"
+                    className="w-full p-2 border rounded mb-2"
+                    value={formData.registration}
+                    onChange={(e) =>
+                      setFormData({ ...formData, registration: e.target.value })
+                    }
+                  />
+                  <div className="grid grid-cols-2 gap-2">
+                    <input
+                      type="datetime-local"
+                      className="p-2 border rounded"
+                      value={formData.startTime}
+                      onChange={(e) =>
+                        setFormData({ ...formData, startTime: e.target.value })
+                      }
+                    />
+                    <input
+                      type="datetime-local"
+                      className="p-2 border rounded"
+                      value={formData.endTime}
+                      onChange={(e) =>
+                        setFormData({ ...formData, endTime: e.target.value })
+                      }
+                    />
+                  </div>
+                  <select
+                    className="w-full p-2 border rounded"
+                    value={formData.category}
+                    onChange={(e) =>
+                      setFormData({ ...formData, category: e.target.value })
+                    }
+                  >
+                    <option value="general">General</option>
+                    <option value="sports">Sports</option>
+                    <option value="ucsc-club">UCSC Club</option>
+                    <option value="social">Social</option>
+                  </select>
+                  <textarea
+                    placeholder="Event Description"
+                    className="w-full p-2 border rounded mb-2"
+                    value={formData.description}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
+                  />
+                  <button
+                    onClick={handleEditEvent}
+                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                  >
+                    Edit Event
+                  </button>
+                </div>
+              </InfoWindow>
+            )}
+
             {selectedEvent && (
               <InfoWindow
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
@@ -492,6 +680,30 @@ export default function Map() {
                         {selectedEvent.category}
                       </span>
                     </div>
+                    {selectedEvent.host == user?.email && (
+                      <div className="flex items-center">
+                        <button
+                          onClick={() => {
+                            setFormData({
+                              title: selectedEvent.title,
+                              description: selectedEvent.description,
+                              startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
+                              endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
+                              capacity: selectedEvent.capacity,
+                              ageLimit: selectedEvent.ageLimit || "None",
+                              registration: selectedEvent.registration,
+                              category: selectedEvent.category,
+                              address: selectedEvent.address,
+                            });
+                            handleEditButtonClick();
+                            setSelectedEventId(selectedEvent.eventId);
+                            setSelectedEvent(null);
+                          }}
+                          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2">
+                          Edit Event
+                        </button>
+                      </div>
+                    )}
                     {user?.email === selectedEvent?.host && (
                       <button
                       onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
@@ -499,7 +711,7 @@ export default function Map() {
                       >
                         Delete Event
                       </button>
-                    )}  
+                    )}
                   </div>
                 </div>
               </InfoWindow>

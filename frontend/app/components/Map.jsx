@@ -682,12 +682,6 @@ export default function Map() {
                     <h3 className="text-lg font-bold text-gray-800">
                       {selectedEvent.title}
                     </h3>
-                    <button
-                      onClick={() => setSelectedEvent(null)}
-                      className="text-gray-500 hover:text-gray-700"
-                    >
-                      ✕
-                    </button>
                   </div>
                   <p className="text-sm text-gray-600 mb-3">
                     {selectedEvent.description}
@@ -741,117 +735,65 @@ export default function Map() {
                         {selectedEvent.ageLimit || "None"}
                       </span>
                     </div>
-                    <p className="text-sm text-gray-600 mb-3">
-                      {selectedEvent.description}
-                    </p>
-                    <div className="space-y-1">
+                    {selectedEvent.registration && (
                       <div className="flex items-center">
                         <span className="text-xs font-medium text-gray-500 w-20">
-                          Address:
+                          Registration:
                         </span>
-                        <span className="text-xs text-gray-700 flex-1">
-                          {selectedEvent.address}
-                        </span>
+                        <a
+                          href={selectedEvent.registration}
+                          className="text-xs text-blue-600 hover:underline"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Link
+                        </a>
                       </div>
-                      <div className="flex items-center">
-                        <span className="text-xs font-medium text-gray-500 w-20">
-                          Host:
-                        </span>
-                        <span className="text-xs text-gray-700 break-all">
-                          {selectedEvent.host}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-xs font-medium text-gray-500 w-20">
-                          Starts:
-                        </span>
-                        <span className="text-xs text-gray-700">
-                          {new Date(selectedEvent.startTime).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-xs font-medium text-gray-500 w-20">
-                          Ends:
-                        </span>
-                        <span className="text-xs text-gray-700">
-                          {new Date(selectedEvent.endTime).toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-xs font-medium text-gray-500 w-20">
-                          Capacity:
-                        </span>
-                        <span className="text-xs text-gray-700">
-                          {selectedEvent.capacity || "Unlimited"}
-                        </span>
-                      </div>
-                      <div className="flex items-center">
-                        <span className="text-xs font-medium text-gray-500 w-20">
-                          Age Limit:
-                        </span>
-                        <span className="text-xs text-gray-700">
-                          {selectedEvent.ageLimit || "None"}
-                        </span>
-                      </div>
-                      {selectedEvent.registration && (
-                        <div className="flex items-center">
-                          <span className="text-xs font-medium text-gray-500 w-20">
-                            Registration:
-                          </span>
-                          <a
-                            href={selectedEvent.registration}
-                            className="text-xs text-blue-600 hover:underline"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            Link
-                          </a>
-                        </div>
-                      )}
-                      <div className="flex items-center">
-                        <span className="text-xs font-medium text-gray-500 w-20">
-                          Category:
-                        </span>
-                        <span className="text-xs text-gray-700 capitalize">
-                          {selectedEvent.category}
-                        </span>
-                      </div>
-                      
-                      {/* RSVP Section */}
-                      <div className="mt-4 space-y-2 border-t pt-4">
-                        <div className="flex justify-between items-center">
-                          <div className="space-x-2">
-                            {rsvps[selectedEvent.eventId]?.includes(user?.email) ? (
-                              <button
-                                onClick={() => handleUnrsvp(selectedEvent.eventId)}
-                                className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
-                              >
-                                Un-RSVP
-                              </button>
-                            ) : (
-                              <button
-                                onClick={() => handleRsvp(selectedEvent.eventId)}
-                                className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
-                              >
-                                RSVP
-                              </button>
-                            )}
+                    )}
+                    <div className="flex items-center">
+                      <span className="text-xs font-medium text-gray-500 w-20">
+                        Category:
+                      </span>
+                      <span className="text-xs text-gray-700 capitalize">
+                        {selectedEvent.category}
+                      </span>
+                    </div>
+                    
+                    {/* RSVP Section */}
+                    <div className="mt-4 space-y-2 border-t pt-4">
+                      <div className="flex justify-between items-center">
+                        <div className="space-x-2">
+                          {rsvps[selectedEvent.eventId]?.includes(user?.email) ? (
                             <button
-                              onClick={(e) => {
-                                const rect = e.target.getBoundingClientRect();
-                                setShowRsvpList(!showRsvpList);
-                              }}
-                              className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
+                              onClick={() => handleUnrsvp(selectedEvent.eventId)}
+                              className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
                             >
-                              {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
+                              Un-RSVP
                             </button>
-                          </div>
-                          <span className="text-sm text-gray-600">
-                            {rsvps[selectedEvent.eventId]?.length || 0} attending
-                          </span>
+                          ) : (
+                            <button
+                              onClick={() => handleRsvp(selectedEvent.eventId)}
+                              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
+                            >
+                              RSVP
+                            </button>
+                          )}
+                          <button
+                            onClick={(e) => {
+                              const rect = e.target.getBoundingClientRect();
+                              setShowRsvpList(!showRsvpList);
+                            }}
+                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
+                          >
+                            {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
+                          </button>
                         </div>
+                        <span className="text-sm text-gray-600">
+                          {rsvps[selectedEvent.eventId]?.length || 0} attending
+                        </span>
                       </div>
                     </div>
+                    
                     {selectedEvent.host == user?.email && (
                       <div className="flex items-center">
                         <button
@@ -885,7 +827,8 @@ export default function Map() {
                       </button>
                     )}
                   </div>
-                </InfoWindow>
+                </div>
+              </InfoWindow>
               )}
             <RsvpPanel
               isOpen={showRsvpList}

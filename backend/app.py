@@ -263,6 +263,12 @@ def update_event():
         auth_header = request.headers.get("Authorization")
         if not auth_header or not auth_header.startswith("Bearer "):
             print("Auth fail: Missing or invalid Authorization header")
+            return jsonify({"error": "Unauthorized"}), 401
+
+        token = auth_header.split(" ")[1]
+        try:
+            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+            user_email = decoded["user"]["email"]
             print(f"Authenticated user: {user_email}")
         except Exception as e:
             print(f"Token validation failed: {str(e)}")

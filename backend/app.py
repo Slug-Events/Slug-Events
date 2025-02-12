@@ -209,6 +209,7 @@ def create_event():
                 "description": event_data["description"],
                 "startTime": start_time,
                 "endTime": end_time,
+                "address": event_data["address"],
                 "location": geo_point,
                 "category": event_data["category"],
                 "capacity": event_data.get("capacity", None),
@@ -247,6 +248,33 @@ def create_event():
     except Exception as e:
         print(f"Unexpected error: {str(e)}")
         return jsonify({"error": "Internal server error"}), 500
+
+@app.route('/delete_event/<event_id>', methods=['DELETE'])
+def delete_event(event_id):
+    """Deletes an event from Firestore given an event_id"""
+    try:
+        print("delete event func")
+        event_ref = db.collection("events").document(event_id)
+        event_ref.delete()
+        return jsonify({"message": "Event deleted successfully"}), 200
+    except Exception as e:
+        print("delete event func fail")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/state")
+def get_state():
+    """Endpoint to retrieve map state from db"""
+    try:
+        state = {"events": []}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            event_obj["eventId"] = event.id
+            state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+
+    except Exception as e:
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 
 @app.route("/logout")

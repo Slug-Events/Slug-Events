@@ -15,6 +15,7 @@ import {
 const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
+const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};
 
 export default function Map() {
   const [rsvps, setRsvps] = useState({});
@@ -437,6 +438,12 @@ export default function Map() {
             zoom={13}
             onClick={handleMapClick}
             onLoad={(map) => (mapRef.current = map)}
+            options={{
+              restriction: {
+                latLngBounds: bounds,
+                strictBounds: true,
+              },
+            }}
           >
             {markers.map((marker, index) => (
               <Marker

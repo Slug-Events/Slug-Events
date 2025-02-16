@@ -360,6 +360,9 @@ def update_event():
         return jsonify({"error": "Unauthorized"}), 401
 
     event_data = request.get_json()
+    validation_error = validate_event_data(event_data)
+    if validation_error:
+        return validation_error
     event_id = event_data.get("eventId")
     if not event_id:
         return jsonify({"error": "Missing event ID"}), 400
@@ -378,21 +381,14 @@ def update_event():
     event.category = event_data.get("category", event.category)
     event.capacity = event_data.get("capacity", event.capacity)
     event.age_limit = event_data.get("age_limit", event.age_limit)
-
-    if "startTime" in event_data:
-        event.start_time = datetime.fromisoformat(event_data["startTime"])
-    if "endTime" in event_data:
-        event.end_time = datetime.fromisoformat(event_data["endTime"])
-    if "location" in event_data:
-        try:
-            event.location = {
-                "latitude": event_data["location"]["latitude"],
-                "longitude": event_data["location"]["longitude"],
-            }
-        except (KeyError, TypeError):
-            return jsonify({"error": "Invalid location format"}), 400
-
+    event.start_time = datetime.fromisoformat(event_data["startTime"])
+    event.end_time = datetime.fromisoformat(event_data["endTime"])
+    event.location = {
+        "latitude": event_data["location"]["latitude"],
+        "longitude": event_data["location"]["longitude"],
+    }
     event.event_id = event_id
+    
     event.update()
     return jsonify({"message": "Event updated successfully"}), 200
 

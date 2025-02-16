@@ -39,6 +39,7 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 class Event:
+    """Class for event object"""
     def __init__(self, title: str, description: str, startTime, endTime, location, category: str, address="", capacity=None, age_limit=None, ownerEmail=None, id=None) -> None:
         self.id = id
         self.title = title
@@ -55,6 +56,7 @@ class Event:
         self.status = "active"
 
     def to_dict(self):
+        """Returns event information in dictionary"""
         return {
             "title": self.title,
             "description": self.description,
@@ -71,6 +73,7 @@ class Event:
         }
 
     def create(self):
+        """Creates event in database"""
         event_ref = db.collection("events").document()
         self.id = event_ref.id
         event_ref.set(self.to_dict())
@@ -78,6 +81,7 @@ class Event:
 
     @classmethod
     def get(cls, event_id):
+        """Creates event object from existing event in database"""
         doc_ref = db.collection("events").document(event_id)
         doc = doc_ref.get()
         if doc.exists:
@@ -99,11 +103,13 @@ class Event:
         return None
 
     def update(self):
+        """Updates existing event in database"""
         if not self.id:
             raise ValueError("Event ID required for update")
         db.collection("events").document(self.id).set(self.to_dict(), merge=True)
 
     def delete(self):
+        """Deletes existing event in database"""
         try:
             event_ref = db.collection("events").document(self.id)
             event_ref.delete()
@@ -112,6 +118,7 @@ class Event:
             return jsonify({"error": str(e)}), 500
 
     def rsvp_add(self, user_email: str):
+        """Adds a user to rsvp list in existing event"""
         rsvp_ref = db.collection("events").document(self.id).collection("rsvps").document(user_email)
         rsvp_ref.set({
             "email": user_email,
@@ -120,13 +127,16 @@ class Event:
         })
 
     def rsvp_remove(self, user_email: str):
+        """Removes a user from the rsvp list in existing event"""
         rsvp_ref = db.collection("events").document(self.id).collection("rsvps").document(user_email)
         rsvp_ref.delete()
 
     def get_rsvps(self):
+        """Gets list of users in rsvp list of an existing event"""
         return [doc.id for doc in db.collection("events").document(self.id).collection("rsvps").stream()]
 
 def get_google_flow():
+    """Gets google login flow using env variables"""
     return Flow.from_client_config(
         {
             "web": {
@@ -145,12 +155,14 @@ def get_google_flow():
     )
 
 def decode_jwt_token(token):
+    """Decodes authorization cookie"""
     try:
         return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
     except Exception:
         return None
 
 def authenticate_request():
+    """Authenticates cookie from user"""
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
         return None
@@ -158,6 +170,7 @@ def authenticate_request():
     return decode_jwt_token(token)
 
 def validate_event_data(event_data):
+    """Validates event data coming from frontend"""
     required_fields = ["title", "description", "startTime", "endTime", "location"]
     missing_fields = [field for field in required_fields if field not in event_data]
     if missing_fields:
@@ -184,6 +197,7 @@ os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 @app.route("/login")
 def login():
+    """login endpoint"""
     next_url = request.args.get("next", "/")
     session["next"] = next_url
     session["nonce"] = secrets.token_urlsafe(16)
@@ -201,6 +215,7 @@ def login():
 
 @app.route("/authorize")
 def authorize():
+    """Google OAuth endpoint"""
     state = session.pop("state", None)
     if not state or state != request.args.get("state"):
         return "Invalid state parameter", 400
@@ -244,6 +259,7 @@ def authorize():
 
 @app.route("/create_event", methods=["POST"])
 def create_event():
+    """Endpoint for creating an event"""
     decoded = authenticate_request()
     if not decoded:
         return jsonify({"error": "Unauthorized"}), 401
@@ -281,6 +297,7 @@ def create_event():
 
 @app.route("/update_event", methods=["POST"])
 def update_event():
+    """Endpoint for updating an existing event"""
     decoded = authenticate_request()
     if not decoded:
         return jsonify({"error": "Unauthorized"}), 401
@@ -324,6 +341,7 @@ def update_event():
 
 @app.route("/delete_event/<event_id>", methods=["DELETE"])
 def delete_event(event_id):
+    """Endpoint for deleting an existing event"""
     decoded = authenticate_request()
     if not decoded:
         return jsonify({"error": "Unauthorized"}), 401
@@ -341,6 +359,7 @@ def delete_event(event_id):
 
 @app.route("/rsvp/<event_id>", methods=["POST"])
 def rsvp_event(event_id):
+    """Endpoint for rsvping a user to an existing event"""
     decoded = authenticate_request()
     if not decoded:
         return jsonify({"error": "Unauthorized"}), 401
@@ -356,6 +375,7 @@ def rsvp_event(event_id):
 
 @app.route("/unrsvp/<event_id>", methods=["DELETE"])
 def unrsvp_event(event_id):
+    """Endpoint for removing user from rsvp list of an existing event"""
     decoded = authenticate_request()
     if not decoded:
         return jsonify({"error": "Unauthorized"}), 401
@@ -371,6 +391,7 @@ def unrsvp_event(event_id):
 
 @app.route("/rsvps/<event_id>", methods=["GET"])
 def get_event_rsvps(event_id):
+    """Endpoint for retrieving rsvp list of an existing event"""
     decoded = authenticate_request()
     if not decoded:
         return jsonify({"error": "Unauthorized"}), 401
@@ -401,6 +422,7 @@ def get_state():
 
 @app.route("/logout")
 def logout():
+    """Endpoint for clearing users authorization cookie"""
     session.clear()
     response = redirect(url_for("/index"))
     response.set_cookie("session", "", expires=0)

@@ -24,12 +24,8 @@ app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
 
 app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID", "your-client-id")
-app.config["GOOGLE_CLIENT_SECRET"] = os.getenv(
-    "GOOGLE_CLIENT_SECRET", "your-client-secret"
-)
-app.config["GOOGLE_REDIRECT_URI"] = os.getenv(
-    "GOOGLE_REDIRECT_URI", "http://localhost:8080/authorize"
-)
+app.config["GOOGLE_CLIENT_SECRET"] = os.getenv("GOOGLE_CLIENT_SECRET", "your-client-secret")
+app.config["GOOGLE_REDIRECT_URI"] = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/authorize")
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
@@ -38,15 +34,99 @@ app.config.update(
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 # Initialize Firebase Admin SDK
-cred = credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                            "slug-events-firebase-key.json"))
+cred = credentials.Certificate(os.path.join(os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"))
 firebase_admin.initialize_app(cred)
 db = firestore.client()
-print(db)
 
+class Event:
+    def __init__(self, title: str, description: str, startTime, endTime, location, category: str, address="", capacity=None, age_limit=None, ownerEmail=None, id=None) -> None:
+        self.id = id
+        self.title = title
+        self.description = description
+        self.startTime = startTime
+        self.endTime = endTime
+        self.address = address
+        self.location = location
+        self.category = category
+        self.capacity = capacity
+        self.age_limit = age_limit
+        self.ownerEmail = ownerEmail
+        self.createdAt = datetime.now()
+        self.status = "active"
+
+    def to_dict(self):
+        return {
+            "title": self.title,
+            "description": self.description,
+            "startTime": self.startTime,
+            "endTime": self.endTime,
+            "address": self.address,
+            "location": self.location,
+            "category": self.category,
+            "capacity": self.capacity,
+            "age_limit": self.age_limit,
+            "ownerEmail": self.ownerEmail,
+            "createdAt": self.createdAt,
+            "status": self.status
+        }
+
+    def create(self):
+        event_ref = db.collection("events").document()
+        self.id = event_ref.id
+        event_ref.set(self.to_dict())
+        return event_ref
+
+    @classmethod
+    def get(cls, event_id):
+        doc_ref = db.collection("events").document(event_id)
+        doc = doc_ref.get()
+        if doc.exists:
+            data = doc.to_dict()
+            event = Event(
+                title=data["title"],
+                description=data["description"],
+                startTime=data["startTime"],
+                endTime=data["endTime"],
+                address=data.get("address"),
+                location=data["location"],
+                category=data["category"],
+                capacity=data.get("capacity"),
+                age_limit=data.get("age_limit"),
+                id=event_id,
+                ownerEmail=data["ownerEmail"]
+            )
+            return event
+        return None
+
+    def update(self):
+        if not self.id:
+            raise ValueError("Event ID required for update")
+        db.collection("events").document(self.id).set(self.to_dict(), merge=True)
+
+    def delete(self):
+        try:
+            event_ref = db.collection("events").document(self.id)
+            event_ref.delete()
+            return jsonify({"message": "Event deleted successfully"}), 200
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+
+    def rsvp_add(self, user_email: str):
+        rsvp_ref = db.collection("events").document(self.id).collection("rsvps").document(user_email)
+        rsvp_ref.set({
+            "email": user_email,
+            "timestamp": datetime.now(),
+            "status": "confirmed"
+        })
+
+    def rsvp_remove(self, user_email: str):
+        rsvp_ref = db.collection("events").document(self.id).collection("rsvps").document(user_email)
+        rsvp_ref.delete()
+
+    def get_rsvps(self):
+        return [doc.id for doc in db.collection("events").document(self.id).collection("rsvps").stream()]
 
 def get_google_flow():
-    """Gets google login flow using env variables"""
     return Flow.from_client_config(
         {
             "web": {
@@ -64,16 +144,46 @@ def get_google_flow():
         ],
     )
 
+def decode_jwt_token(token):
+    try:
+        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
+    except Exception:
+        return None
+
+def authenticate_request():
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        return None
+    token = auth_header.split(" ")[1]
+    return decode_jwt_token(token)
+
+def validate_event_data(event_data):
+    required_fields = ["title", "description", "startTime", "endTime", "location"]
+    missing_fields = [field for field in required_fields if field not in event_data]
+    if missing_fields:
+        return jsonify({"error": f'Missing required fields: {", ".join(missing_fields)}'}), 400
+
+    try:
+        start_time = datetime.fromisoformat(event_data["startTime"])
+        end_time = datetime.fromisoformat(event_data["endTime"])
+        if end_time <= start_time:
+            return jsonify({"error": "End time must be after start time"}), 400
+    except ValueError as e:
+        return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
+
+    try:
+        assert "location" in event_data
+        assert "latitude" in event_data["location"]
+        assert "longitude" in event_data["location"]
+    except (KeyError, TypeError):
+        return jsonify({"error": "Invalid location format"}), 400
+
+    return None
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-
 @app.route("/login")
 def login():
-    """
-    Login endpoint for users
-    Redirects to Google OAuth
-    """
     next_url = request.args.get("next", "/")
     session["next"] = next_url
     session["nonce"] = secrets.token_urlsafe(16)
@@ -87,18 +197,10 @@ def login():
         state=session["nonce"],
     )
     session["state"] = state
-    # print(f"Generated state: {state}, nonce: {session['nonce']}")
     return redirect(authorization_url)
-
 
 @app.route("/authorize")
 def authorize():
-    """
-    Callback endpoint for Google OAuth
-    Authorizes user
-    Returns:
-        Cookie containing user info
-    """
     state = session.pop("state", None)
     if not state or state != request.args.get("state"):
         return "Invalid state parameter", 400
@@ -140,323 +242,146 @@ def authorize():
     next_url = session.pop("next", "/")
     return redirect(f"{next_url}?token={jwt_token}")
 
-# pylint: disable=too-many-return-statements, too-many-statements, broad-exception-caught
 @app.route("/create_event", methods=["POST"])
 def create_event():
-    """
-    Endpoint to create event in database using request from frontend
-    """
-    try:
-        print("\n=== New Event Creation Request ===")
-        print("Headers:", dict(request.headers))
-        print("Raw JSON:", request.data.decode())
+    decoded = authenticate_request()
+    if not decoded:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            print("Auth fail: Missing or invalid Authorization header")
-            return jsonify({"error": "Unauthorized"}), 401
+    event_data = request.get_json()
+    validation_error = validate_event_data(event_data)
+    if validation_error:
+        return validation_error
 
-        token = auth_header.split(" ")[1]
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
-            print(f"Authenticated user: {user_email}")
-        except Exception as e:
-            print(f"Token validation failed: {str(e)}")
-            return jsonify({"error": "Invalid token"}), 401
-        try:
-            event_data = request.get_json()
-            print("Parsed JSON:", event_data)
-        except Exception as e:
-            print(f"JSON parse error: {str(e)}")
-            return jsonify({"error": "Invalid JSON format"}), 400
+    user_email = decoded["user"]["email"]
+    event = Event(
+        title=event_data["title"],
+        description=event_data["description"],
+        startTime=datetime.fromisoformat(event_data["startTime"]),
+        endTime=datetime.fromisoformat(event_data["endTime"]),
+        address=event_data.get("address"),
+        location={
+            "latitude": event_data["location"]["latitude"],
+            "longitude": event_data["location"]["longitude"],
+        },
+        category=event_data.get("category"),
+        capacity=event_data.get("capacity"),
+        age_limit=event_data.get("age_limit"),
+        ownerEmail=user_email
+    )
 
-        required_fields = ["title", "description", "startTime", "endTime", "location"]
-        missing_fields = [field for field in required_fields if field not in event_data]
-        if missing_fields:
-            print(f"Missing fields: {missing_fields}")
-            return (
-                jsonify(
-                    {"error": f'Missing required fields: {", ".join(missing_fields)}'}
-                ),
-                400,
-            )
+    event_ref = event.create()
+    doc = event_ref.get()
 
-        try:
-            start_time = datetime.fromisoformat(event_data["startTime"])
-            end_time = datetime.fromisoformat(event_data["endTime"])
-            print(f"Validated dates - Start: {start_time}, End: {end_time}")
-            if end_time <= start_time:
-                print("Invalid date range")
-                return jsonify({"error": "End time must be after start time"}), 400
-        except ValueError as e:
-            print(f"Date validation error: {str(e)}")
-            return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
+    return jsonify({
+        "message": "Event created successfully",
+        "eventId": event_ref.id,
+        "firestoreData": doc.to_dict()
+    }), 201
 
-        try:
-            geo_point = {
-                "latitude": event_data["location"]["latitude"],
-                "longitude": event_data["location"]["longitude"],
-            }
-            print(f"Validated location: {geo_point}")
-        except (KeyError, TypeError) as e:
-            print(f"Location validation error: {str(e)}")
-            return jsonify({"error": "Invalid location format"}), 400
-
-        try:
-            event_ref = db.collection("events").document()
-            event_data = {
-                "title": event_data["title"],
-                "description": event_data["description"],
-                "startTime": start_time,
-                "endTime": end_time,
-                "address": event_data["address"],
-                "location": geo_point,
-                "category": event_data["category"],
-                "capacity": event_data.get("capacity", None),
-                "age_limit": event_data.get("age_limit", None),
-                "ownerEmail": user_email,
-                "createdAt": datetime.now(),
-                "status": "active",
-            }
-
-            print(f"Attempting Firestore write to document {event_ref.id}")
-            print("Document data:", event_data)
-
-            event_ref.set(event_data)
-            print(f"events collection{event_ref.get()}")
-
-            doc = event_ref.get()
-            if doc.exists:
-                print("Firestore write confirmed")
-                return (
-                    jsonify(
-                        {
-                            "message": "Event created successfully",
-                            "eventId": event_ref.id,
-                            "firestoreData": doc.to_dict(),
-                        }
-                    ),
-                    201,
-                )
-            print("Firestore write failed silently")
-            return jsonify({"error": "Document not created"}), 500
-
-        except Exception as e:
-            print(f"Firestore error: {str(e)}")
-            return jsonify({"error": f"Database error: {str(e)}"}), 500
-
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
-
-# pylint: disable=too-many-return-statements, too-many-statements, broad-exception-caught
 @app.route("/update_event", methods=["POST"])
 def update_event():
-    """
-    Endpoint to create event in database using request from frontend
-    """
-    try:
-        print("\n=== New Event Update Request ===")
-        print("Headers:", dict(request.headers))
-        print("Raw JSON:", request.data.decode())
+    decoded = authenticate_request()
+    if not decoded:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            print("Auth fail: Missing or invalid Authorization header")
-            return jsonify({"error": "Unauthorized"}), 401
+    event_data = request.get_json()
+    event_id = event_data.get("eventId")
+    if not event_id:
+        return jsonify({"error": "Missing event ID"}), 400
 
-        token = auth_header.split(" ")[1]
+    event = Event.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    user_email = decoded["user"]["email"]
+    if event.ownerEmail != user_email:
+        return jsonify({"error": "Unauthorized to update this event"}), 403
+
+    event.title = event_data.get("title", event.title)
+    event.description = event_data.get("description", event.description)
+    event.address = event_data.get("address", event.address)
+    event.category = event_data.get("category", event.category)
+    event.capacity = event_data.get("capacity", event.capacity)
+    event.age_limit = event_data.get("age_limit", event.age_limit)
+
+    if "startTime" in event_data:
+        event.startTime = datetime.fromisoformat(event_data["startTime"])
+    if "endTime" in event_data:
+        event.endTime = datetime.fromisoformat(event_data["endTime"])
+    if "location" in event_data:
         try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
-            print(f"Authenticated user: {user_email}")
-        except Exception as e:
-            print(f"Token validation failed: {str(e)}")
-            return jsonify({"error": "Invalid token"}), 401
-        try:
-            event_data = request.get_json()
-            print("Parsed JSON:", event_data)
-        except Exception as e:
-            print(f"JSON parse error: {str(e)}")
-            return jsonify({"error": "Invalid JSON format"}), 400
-
-        required_fields = ["title", "description", "startTime", "endTime", "location"]
-        missing_fields = [field for field in required_fields if field not in event_data]
-        if missing_fields:
-            print(f"Missing fields: {missing_fields}")
-            return (
-                jsonify(
-                    {"error": f'Missing required fields: {", ".join(missing_fields)}'}
-                ),
-                400,
-            )
-
-        try:
-            start_time = datetime.fromisoformat(event_data["startTime"])
-            end_time = datetime.fromisoformat(event_data["endTime"])
-            print(f"Validated dates - Start: {start_time}, End: {end_time}")
-            if end_time <= start_time:
-                print("Invalid date range")
-                return jsonify({"error": "End time must be after start time"}), 400
-        except ValueError as e:
-            print(f"Date validation error: {str(e)}")
-            return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
-
-        try:
-            geo_point = {
+            event.location = {
                 "latitude": event_data["location"]["latitude"],
                 "longitude": event_data["location"]["longitude"],
             }
-            print(f"Validated location: {geo_point}")
-        except (KeyError, TypeError) as e:
-            print(f"Location validation error: {str(e)}")
+        except (KeyError, TypeError):
             return jsonify({"error": "Invalid location format"}), 400
 
-        try:
-            event_ref = db.collection("events").document(event_data["eventId"])
-            event_data = {
-                "title": event_data["title"],
-                "description": event_data["description"],
-                "startTime": start_time,
-                "endTime": end_time,
-                "address": event_data["address"],
-                "location": geo_point,
-                "category": event_data["category"],
-                "capacity": event_data.get("capacity", None),
-                "age_limit": event_data.get("age_limit", None),
-                "ownerEmail": user_email,
-                "createdAt": datetime.now(),
-                "status": "active",
-            }
+    event.id = event_id
+    event.update()
+    return jsonify({"message": "Event updated successfully"}), 200
 
-            print(f"Attempting Firestore write to document {event_ref.id}")
-            print("Document data:", event_data)
+@app.route("/delete_event/<event_id>", methods=["DELETE"])
+def delete_event(event_id):
+    decoded = authenticate_request()
+    if not decoded:
+        return jsonify({"error": "Unauthorized"}), 401
 
-            event_ref.set(event_data)
-            print(f"events collection{event_ref.get()}")
+    event = Event.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
 
-            doc = event_ref.get()
-            if doc.exists:
-                print("Firestore write confirmed")
-                return (
-                    jsonify(
-                        {
-                            "message": "Event created successfully",
-                            "eventId": event_ref.id,
-                            "firestoreData": doc.to_dict(),
-                        }
-                    ),
-                    201,
-                )
-            print("Firestore write failed silently")
-            return jsonify({"error": "Document not created"}), 500
+    user_email = decoded["user"]["email"]
+    if event.ownerEmail != user_email:
+        return jsonify({"error": "Unauthorized to delete this event"}), 403
 
-        except Exception as e:
-            print(f"Firestore error: {str(e)}")
-            return jsonify({"error": f"Database error: {str(e)}"}), 500
-
-    except Exception as e:
-        print(f"Unexpected error: {str(e)}")
-        return jsonify({"error": "Internal server error"}), 500
+    event.delete()
+    return jsonify({"message": "Event deleted successfully"}), 200
 
 @app.route("/rsvp/<event_id>", methods=["POST"])
 def rsvp_event(event_id):
-    """Endpoint to RSVP to an event"""
-    try:
-        # Verify authentication
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
+    decoded = authenticate_request()
+    if not decoded:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        token = auth_header.split(" ")[1]
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
-        except Exception:
-            return jsonify({"error": "Invalid token"}), 401
+    event = Event.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
 
-        # Add RSVP to the event's subcollection
-        rsvp_ref = (
-            db.collection("events").document(event_id).collection("rsvps").document(user_email)
-        )
-        rsvp_data = {
-            "email": user_email,
-            "timestamp": datetime.now(),
-            "status": "confirmed"
-        }
-        rsvp_ref.set(rsvp_data)
-
-        return jsonify({"message": "RSVP successful"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    user_email = decoded["user"]["email"]
+    event.id = event_id
+    event.rsvp_add(user_email)
+    return jsonify({"message": "RSVP successful"}), 200
 
 @app.route("/unrsvp/<event_id>", methods=["DELETE"])
 def unrsvp_event(event_id):
-    """Endpoint to remove RSVP from an event"""
-    try:
-        # Verify authentication
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
+    decoded = authenticate_request()
+    if not decoded:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        token = auth_header.split(" ")[1]
-        try:
-            decoded = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_email = decoded["user"]["email"]
-        except Exception:
-            return jsonify({"error": "Invalid token"}), 401
+    event = Event.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
 
-        # Remove RSVP from the event's subcollection
-        rsvp_ref = (
-            db.collection("events").document(event_id).collection("rsvps").document(user_email)
-        )
-        rsvp_ref.delete()
-
-        return jsonify({"message": "RSVP removed successfully"}), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    user_email = decoded["user"]["email"]
+    event.id = event_id
+    event.rsvp_remove(user_email)
+    return jsonify({"message": "RSVP removed successfully"}), 200
 
 @app.route("/rsvps/<event_id>", methods=["GET"])
 def get_event_rsvps(event_id):
-    """Endpoint to get all RSVPs for an event"""
-    try:
-        # Verify authentication
-        auth_header = request.headers.get("Authorization")
-        if not auth_header or not auth_header.startswith("Bearer "):
-            return jsonify({"error": "Unauthorized"}), 401
+    decoded = authenticate_request()
+    if not decoded:
+        return jsonify({"error": "Unauthorized"}), 401
 
-        token = auth_header.split(" ")[1]
-        try:
-            jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-        except Exception:
-            return jsonify({"error": "Invalid token"}), 401
+    event = Event.get(event_id)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
 
-        # Get all RSVPs for the event
-        rsvps_ref = db.collection("events").document(event_id).collection("rsvps")
-        rsvps = rsvps_ref.stream()
-
-        rsvp_list = [doc.get("email") for doc in rsvps]
-
-        return jsonify(rsvp_list), 200
-
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-@app.route('/delete_event/<event_id>', methods=['DELETE'])
-def delete_event(event_id):
-    """Deletes an event from Firestore given an event_id"""
-    try:
-        print("delete event func")
-        event_ref = db.collection("events").document(event_id)
-        event_ref.delete()
-        return jsonify({"message": "Event deleted successfully"}), 200
-    except Exception as e:
-        print("delete event func fail")
-        return jsonify({"error": str(e)}), 500
-
+    event.id = event_id
+    rsvps = event.get_rsvps()
+    return jsonify(rsvps), 200
 
 @app.route("/state")
 def get_state():
@@ -471,19 +396,15 @@ def get_state():
         return jsonify({"status": 200, "state": state})
 
     except Exception as e:
+        print(e)
         return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/logout")
 def logout():
-    """
-    Logout endpoint
-    Clears sessions and resets users login cookie
-    """
     session.clear()
     response = redirect(url_for("/index"))
     response.set_cookie("session", "", expires=0)
     return response
-
 
 if __name__ == "__main__":
     app.run(debug=True, host="localhost", port=8080)

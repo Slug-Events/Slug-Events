@@ -16,6 +16,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
+from typing import Optional, Dict
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
@@ -54,15 +55,15 @@ class Event:
         self,
         title: str,
         description: str,
-        start_time,
-        end_time,
-        location,
+        start_time: datetime,
+        end_time: datetime,
+        location: Dict[str,str],
         category: str,
-        address="",
-        capacity=None,
-        age_limit=None,
-        owner_email=None,
-        event_id=None,
+        owner_email: str,
+        address: str="",
+        capacity: Optional[int] = None,
+        age_limit: Optional[int] = None,
+        event_id: Optional[str] = None,
     ) -> None:
         self.event_id = event_id
         self.title = title
@@ -94,13 +95,39 @@ class Event:
             "createdAt": self.created_at,
             "status": self.status,
         }
-
     def create(self):
         """Creates event in database"""
         event_ref = db.collection("events").document()
         self.event_id = event_ref.id
         event_ref.set(self.to_dict())
         return event_ref
+
+    @classmethod
+    def request_to_event(cls):
+        """Creates event object from request"""
+        event_data = request.get_json()
+        validation_error = validate_event_data(event_data)
+        if validation_error:
+            return validation_error
+        user_email = get_user_email()
+        assert user_email
+        
+        event = Event(
+            title=event_data["title"],
+            description=event_data["description"],
+            start_time=datetime.fromisoformat(event_data["startTime"]),
+            end_time=datetime.fromisoformat(event_data["endTime"]),
+            address=event_data.get("address"),
+            location={
+                "latitude": event_data["location"]["latitude"],
+                "longitude": event_data["location"]["longitude"],
+            },
+            category=event_data.get("category"),
+            capacity=event_data.get("capacity"),
+            age_limit=event_data.get("age_limit"),
+            owner_email=user_email
+        )
+        return event
 
     @classmethod
     def get(cls, event_id):
@@ -125,11 +152,9 @@ class Event:
             return event
         return None
 
-    def update(self):
+    def update(self, event_id):
         """Updates existing event in database"""
-        if not self.event_id:
-            raise ValueError("Event ID required for update")
-        db.collection("events").document(self.event_id).set(self.to_dict(), merge=True)
+        db.collection("events").document(event_id).set(self.to_dict(), merge=True)
 
     def delete(self):
         """Deletes existing event in database"""
@@ -192,6 +217,23 @@ def get_google_flow():
         ],
     )
 
+def get_user_email():
+    decoded = authenticate_request()
+    if not decoded:
+        return ""
+    user_email = decoded["user"]["email"]
+    return user_email
+
+
+def get_id():
+    event_data = request.get_json()
+    validation_error = validate_event_data(event_data)
+    if validation_error:
+        return validation_error
+    event_id = event_data.get("eventId")
+    if not event_id:
+        return jsonify({"error": "Missing event ID"}), 400
+    return event_id
 
 def decode_jwt_token(token):
     """Decodes authorization cookie"""
@@ -311,31 +353,8 @@ def authorize():
 @app.route("/create_event", methods=["POST"])
 def create_event():
     """Endpoint for creating an event"""
-    decoded = authenticate_request()
-    if not decoded:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    event_data = request.get_json()
-    validation_error = validate_event_data(event_data)
-    if validation_error:
-        return validation_error
-
-    user_email = decoded["user"]["email"]
-    event = Event(
-        title=event_data["title"],
-        description=event_data["description"],
-        start_time=datetime.fromisoformat(event_data["startTime"]),
-        end_time=datetime.fromisoformat(event_data["endTime"]),
-        address=event_data.get("address"),
-        location={
-            "latitude": event_data["location"]["latitude"],
-            "longitude": event_data["location"]["longitude"],
-        },
-        category=event_data.get("category"),
-        capacity=event_data.get("capacity"),
-        age_limit=event_data.get("age_limit"),
-        owner_email=user_email,
-    )
+    event = Event.request_to_event()
+    assert isinstance(event, Event)
 
     event_ref = event.create()
     doc = event_ref.get()
@@ -355,56 +374,32 @@ def create_event():
 @app.route("/update_event", methods=["POST"])
 def update_event():
     """Endpoint for updating an existing event"""
-    decoded = authenticate_request()
-    if not decoded:
-        return jsonify({"error": "Unauthorized"}), 401
+    event_id = get_id()
+    old_event = Event.get(event_id)
+    updated_event = Event.request_to_event()
+    assert isinstance(updated_event, Event)
 
-    event_data = request.get_json()
-    validation_error = validate_event_data(event_data)
-    if validation_error:
-        return validation_error
-    event_id = event_data.get("eventId")
-    if not event_id:
-        return jsonify({"error": "Missing event ID"}), 400
-
-    event = Event.get(event_id)
-    if not event:
+    if not old_event:
         return jsonify({"error": "Event not found"}), 404
 
-    user_email = decoded["user"]["email"]
-    if event.owner_email != user_email:
+    if old_event.owner_email != updated_event.owner_email:
         return jsonify({"error": "Unauthorized to update this event"}), 403
 
-    event.title = event_data.get("title", event.title)
-    event.description = event_data.get("description", event.description)
-    event.address = event_data.get("address", event.address)
-    event.category = event_data.get("category", event.category)
-    event.capacity = event_data.get("capacity", event.capacity)
-    event.age_limit = event_data.get("age_limit", event.age_limit)
-    event.start_time = datetime.fromisoformat(event_data["startTime"])
-    event.end_time = datetime.fromisoformat(event_data["endTime"])
-    event.location = {
-        "latitude": event_data["location"]["latitude"],
-        "longitude": event_data["location"]["longitude"],
-    }
-    event.event_id = event_id
-    
-    event.update()
+    updated_event.update(event_id)
     return jsonify({"message": "Event updated successfully"}), 200
 
 
 @app.route("/delete_event/<event_id>", methods=["DELETE"])
 def delete_event(event_id):
     """Endpoint for deleting an existing event"""
-    decoded = authenticate_request()
-    if not decoded:
+    user_email = get_user_email()
+    if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
 
     event = Event.get(event_id)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
-    user_email = decoded["user"]["email"]
     if event.owner_email != user_email:
         return jsonify({"error": "Unauthorized to delete this event"}), 403
 
@@ -415,15 +410,14 @@ def delete_event(event_id):
 @app.route("/rsvp/<event_id>", methods=["POST"])
 def rsvp_event(event_id):
     """Endpoint for rsvping a user to an existing event"""
-    decoded = authenticate_request()
-    if not decoded:
+    user_email = get_user_email()
+    if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
 
     event = Event.get(event_id)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
-    user_email = decoded["user"]["email"]
     event.event_id = event_id
     event.rsvp_add(user_email)
     return jsonify({"message": "RSVP successful"}), 200
@@ -432,15 +426,14 @@ def rsvp_event(event_id):
 @app.route("/unrsvp/<event_id>", methods=["DELETE"])
 def unrsvp_event(event_id):
     """Endpoint for removing user from rsvp list of an existing event"""
-    decoded = authenticate_request()
-    if not decoded:
+    user_email = get_user_email()
+    if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
 
     event = Event.get(event_id)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
-    user_email = decoded["user"]["email"]
     event.event_id = event_id
     event.rsvp_remove(user_email)
     return jsonify({"message": "RSVP removed successfully"}), 200
@@ -449,9 +442,6 @@ def unrsvp_event(event_id):
 @app.route("/rsvps/<event_id>", methods=["GET"])
 def get_event_rsvps(event_id):
     """Endpoint for retrieving rsvp list of an existing event"""
-    decoded = authenticate_request()
-    if not decoded:
-        return jsonify({"error": "Unauthorized"}), 401
 
     event = Event.get(event_id)
     if not event:

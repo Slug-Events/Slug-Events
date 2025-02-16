@@ -218,6 +218,7 @@ def get_google_flow():
     )
 
 def get_user_email():
+    """Gets user email from request"""
     decoded = authenticate_request()
     if not decoded:
         return ""
@@ -226,6 +227,7 @@ def get_user_email():
 
 
 def get_id():
+    """gets event id from request"""
     event_data = request.get_json()
     validation_error = validate_event_data(event_data)
     if validation_error:

@@ -382,10 +382,9 @@ export default function Map() {
   };
 
   const handleEditButtonClick = () => {
-    setShowEditForm(true);
-    if (mapRef.current) {
-      const center = mapRef.current.getCenter();
-      updateFormLocation(center.lat(), center.lng());
+    if (selectedEvent) {
+      updateFormLocation(selectedEvent.lat, selectedEvent.lng);
+      setShowEditForm(true);
     }
   };
 

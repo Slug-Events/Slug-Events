@@ -6,7 +6,6 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
-from datetime import datetime
 import jwt
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
@@ -16,7 +15,8 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
-from typing import Optional, Dict
+from event import Event
+from helpers import *
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
@@ -48,156 +48,6 @@ firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 
-class Event:
-    """Class for event object"""
-
-    def __init__(
-        self,
-        title: str,
-        description: str,
-        start_time: datetime,
-        end_time: datetime,
-        location: Dict[str,str],
-        category: str,
-        owner_email: str,
-        address: str="",
-        capacity: Optional[int] = None,
-        age_limit: Optional[int] = None,
-        event_id: Optional[str] = None,
-    ) -> None:
-        self.event_id = event_id
-        self.title = title
-        self.description = description
-        self.start_time = start_time
-        self.end_time = end_time
-        self.address = address
-        self.location = location
-        self.category = category
-        self.capacity = capacity
-        self.age_limit = age_limit
-        self.owner_email = owner_email
-        self.created_at = datetime.now()
-        self.status = "active"
-
-    def to_dict(self):
-        """Returns event information in dictionary"""
-        return {
-            "title": self.title,
-            "description": self.description,
-            "startTime": self.start_time,
-            "endTime": self.end_time,
-            "address": self.address,
-            "location": self.location,
-            "category": self.category,
-            "capacity": self.capacity,
-            "age_limit": self.age_limit,
-            "ownerEmail": self.owner_email,
-            "createdAt": self.created_at,
-            "status": self.status,
-        }
-    def create(self):
-        """Creates event in database"""
-        event_ref = db.collection("events").document()
-        self.event_id = event_ref.id
-        event_ref.set(self.to_dict())
-        return event_ref
-
-    @classmethod
-    def request_to_event(cls):
-        """Creates event object from request"""
-        event_data = request.get_json()
-        validation_error = validate_event_data(event_data)
-        if validation_error:
-            return validation_error
-        user_email = get_user_email()
-        assert user_email
-        
-        event = Event(
-            title=event_data["title"],
-            description=event_data["description"],
-            start_time=datetime.fromisoformat(event_data["startTime"]),
-            end_time=datetime.fromisoformat(event_data["endTime"]),
-            address=event_data.get("address"),
-            location={
-                "latitude": event_data["location"]["latitude"],
-                "longitude": event_data["location"]["longitude"],
-            },
-            category=event_data.get("category"),
-            capacity=event_data.get("capacity"),
-            age_limit=event_data.get("age_limit"),
-            owner_email=user_email
-        )
-        return event
-
-    @classmethod
-    def get(cls, event_id):
-        """Creates event object from existing event in database"""
-        doc_ref = db.collection("events").document(event_id)
-        doc = doc_ref.get()
-        if doc.exists:
-            data = doc.to_dict()
-            event = Event(
-                title=data["title"],
-                description=data["description"],
-                start_time=data["startTime"],
-                end_time=data["endTime"],
-                address=data.get("address"),
-                location=data["location"],
-                category=data["category"],
-                capacity=data.get("capacity"),
-                age_limit=data.get("age_limit"),
-                event_id=event_id,
-                owner_email=data["ownerEmail"],
-            )
-            return event
-        return None
-
-    def update(self, event_id):
-        """Updates existing event in database"""
-        db.collection("events").document(event_id).set(self.to_dict(), merge=True)
-
-    def delete(self):
-        """Deletes existing event in database"""
-        try:
-            event_ref = db.collection("events").document(self.event_id)
-            event_ref.delete()
-            return jsonify({"message": "Event deleted successfully"}), 200
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
-
-    def rsvp_add(self, user_email: str):
-        """Adds a user to rsvp list in existing event"""
-        rsvp_ref = (
-            db.collection("events")
-            .document(self.event_id)
-            .collection("rsvps")
-            .document(user_email)
-        )
-        rsvp_ref.set(
-            {"email": user_email, "timestamp": datetime.now(), "status": "confirmed"}
-        )
-
-    def rsvp_remove(self, user_email: str):
-        """Removes a user from the rsvp list in existing event"""
-        rsvp_ref = (
-            db.collection("events")
-            .document(self.event_id)
-            .collection("rsvps")
-            .document(user_email)
-        )
-        rsvp_ref.delete()
-
-    def get_rsvps(self):
-        """Gets list of users in rsvp list of an existing event"""
-        return [
-            doc.id
-            for doc in db.collection("events")
-            .document(self.event_id)
-            .collection("rsvps")
-            .stream()
-        ]
-
-
 def get_google_flow():
     """Gets google login flow using env variables"""
     return Flow.from_client_config(
@@ -216,70 +66,6 @@ def get_google_flow():
             "openid",
         ],
     )
-
-def get_user_email():
-    """Gets user email from request"""
-    decoded = authenticate_request()
-    if not decoded:
-        return ""
-    user_email = decoded["user"]["email"]
-    return user_email
-
-
-def get_id():
-    """gets event id from request"""
-    event_data = request.get_json()
-    validation_error = validate_event_data(event_data)
-    if validation_error:
-        return validation_error
-    event_id = event_data.get("eventId")
-    if not event_id:
-        return jsonify({"error": "Missing event ID"}), 400
-    return event_id
-
-def decode_jwt_token(token):
-    """Decodes authorization cookie"""
-    try:
-        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-    except Exception:
-        return None
-
-
-def authenticate_request():
-    """Authenticates cookie from user"""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return None
-    token = auth_header.split(" ")[1]
-    return decode_jwt_token(token)
-
-
-def validate_event_data(event_data):
-    """Validates event data coming from frontend"""
-    required_fields = ["title", "description", "startTime", "endTime", "location"]
-    missing_fields = [field for field in required_fields if field not in event_data]
-    if missing_fields:
-        return (
-            jsonify({"error": f'Missing required fields: {", ".join(missing_fields)}'}),
-            400,
-        )
-
-    try:
-        start_time = datetime.fromisoformat(event_data["startTime"])
-        end_time = datetime.fromisoformat(event_data["endTime"])
-        if end_time <= start_time:
-            return jsonify({"error": "End time must be after start time"}), 400
-    except ValueError as e:
-        return jsonify({"error": f"Invalid date format: {str(e)}"}), 400
-
-    try:
-        assert "location" in event_data
-        assert "latitude" in event_data["location"]
-        assert "longitude" in event_data["location"]
-    except (KeyError, TypeError):
-        return jsonify({"error": "Invalid location format"}), 400
-
-    return None
 
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -355,7 +141,7 @@ def authorize():
 @app.route("/create_event", methods=["POST"])
 def create_event():
     """Endpoint for creating an event"""
-    event = Event.request_to_event()
+    event = Event.request_to_event(db)
     assert isinstance(event, Event)
 
     event_ref = event.create()
@@ -377,8 +163,8 @@ def create_event():
 def update_event():
     """Endpoint for updating an existing event"""
     event_id = get_id()
-    old_event = Event.get(event_id)
-    updated_event = Event.request_to_event()
+    old_event = Event.get(event_id, db)
+    updated_event = Event.request_to_event(db)
     assert isinstance(updated_event, Event)
 
     if not old_event:
@@ -398,7 +184,7 @@ def delete_event(event_id):
     if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
 
-    event = Event.get(event_id)
+    event = Event.get(event_id, db)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
@@ -416,7 +202,7 @@ def rsvp_event(event_id):
     if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
 
-    event = Event.get(event_id)
+    event = Event.get(event_id, db)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
@@ -432,7 +218,7 @@ def unrsvp_event(event_id):
     if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
 
-    event = Event.get(event_id)
+    event = Event.get(event_id, db)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
@@ -445,7 +231,7 @@ def unrsvp_event(event_id):
 def get_event_rsvps(event_id):
     """Endpoint for retrieving rsvp list of an existing event"""
 
-    event = Event.get(event_id)
+    event = Event.get(event_id, db)
     if not event:
         return jsonify({"error": "Event not found"}), 404
 

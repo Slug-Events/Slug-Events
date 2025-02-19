@@ -1,0 +1,2 @@
+[MASTER]
+disable=broad-exception-caught,too-many-instance-attributes,too-many-arguments

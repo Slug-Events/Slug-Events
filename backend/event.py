@@ -2,9 +2,11 @@
 Class for event object
 """
 from datetime import datetime
-from flask import request, jsonify
 from typing import Optional, Dict
-from helpers import *
+from flask import request, jsonify
+
+from helpers import get_user_email, validate_event_data
+
 
 class Event:
     """Class for event object"""
@@ -71,7 +73,7 @@ class Event:
             return validation_error
         user_email = get_user_email()
         assert user_email
-        
+
         event = Event(
             title=event_data["title"],
             description=event_data["description"],

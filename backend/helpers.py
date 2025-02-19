@@ -8,7 +8,6 @@ import jwt
 from flask import request, jsonify
 
 
-
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 def decode_jwt_token(token):

@@ -36,7 +36,7 @@ export default function Map() {
     category: "general",
     address: "",
     capacity: "",
-    ageLimit: ""
+    age_limit: ""
   });
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
@@ -93,7 +93,7 @@ export default function Map() {
             category: event.category,
             address: event.address,
             capacity: event.capacity,
-            ageLimit: event.age_limit,
+            age_limit: event.age_limit,
             host: event.ownerEmail,
             eventId: event.eventId,
             rsvps: event.rsvps,
@@ -502,9 +502,9 @@ export default function Map() {
                       type="number"
                       placeholder="Age Limit (optional)"
                       className="p-2 border rounded"
-                      value={formData.ageLimit}
+                      value={formData.age_limit}
                       onChange={(e) =>
-                        setFormData({ ...formData, ageLimit: e.target.value })
+                        setFormData({ ...formData, age_limit: e.target.value })
                       }
                     />
                   </div>
@@ -615,9 +615,9 @@ export default function Map() {
                       type="number"
                       placeholder="Age Limit (optional)"
                       className="p-2 border rounded"
-                      value={formData.ageLimit}
+                      value={formData.age_limit}
                       onChange={(e) =>
-                        setFormData({ ...formData, ageLimit: e.target.value })
+                        setFormData({ ...formData, age_limit: e.target.value })
                       }
                     />
                   </div>
@@ -738,7 +738,7 @@ export default function Map() {
                         Age Limit:
                       </span>
                       <span className="text-xs text-gray-700">
-                        {selectedEvent.ageLimit || "None"}
+                        {selectedEvent.age_limit}
                       </span>
                     </div>
                     {selectedEvent.registration && (
@@ -810,7 +810,7 @@ export default function Map() {
                               startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
                               endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
                               capacity: selectedEvent.capacity,
-                              ageLimit: selectedEvent.ageLimit || "None",
+                              age_limit: selectedEvent.age_limit || "None",
                               registration: selectedEvent.registration,
                               category: selectedEvent.category,
                               address: selectedEvent.address,

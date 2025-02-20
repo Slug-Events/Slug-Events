@@ -86,7 +86,7 @@ class Event:
             },
             category=event_data.get("category"),
             capacity=event_data.get("capacity"),
-            age_limit=event_data.get("age_limit"),
+            age_limit=int(event_data.get("age_limit")),
             owner_email=user_email,
             db = db
         )

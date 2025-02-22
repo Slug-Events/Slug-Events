@@ -241,6 +241,21 @@ def get_event_rsvps(event_id):
     rsvps = event.get_rsvps()
     return jsonify(rsvps), 200
 
+@app.route("/filter/<option>", methods=["GET"])
+def filter_events(option):
+    try:
+        print("FILTER OPTION:", option)
+        state = {"events":[]}
+        events = db.collection("events").stream()
+        for event in events:
+                event_obj = event.to_dict()
+                if event_obj.get("category") == option:
+                    event_obj["eventId"] = event.id
+                    state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/state")
 def get_state():

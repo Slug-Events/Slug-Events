@@ -347,6 +347,46 @@ export default function Map() {
     }
   }
 
+  const filterEvents = async (option) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/filter/${option}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to filter events");
+
+      const data = await response.json();
+      if (data.state?.events) {
+        setMarkers(
+          data.state.events.map((event) => ({
+            lat: event.location.latitude,
+            lng: event.location.longitude,
+            title: event.title,
+            description: event.description,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            category: event.category,
+            address: event.address,
+            capacity: event.capacity,
+            age_limit: event.age_limit,
+            host: event.ownerEmail,
+            eventId: event.eventId,
+            rsvps: event.rsvps,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error filtering events:", error);
+    }
+  }
+
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
@@ -413,6 +453,22 @@ export default function Map() {
           >
             Create Event
           </button>
+          <select
+            className="w-full p-2 border rounded"
+            defaultValue="general"
+            onChange={(e) => {
+              if (e.target.value === "general") {
+                fetchEvents()
+              }else{
+                filterEvents(e.target.value)
+              }
+            }}
+          >
+            <option value="general">General</option>
+            <option value="sports">Sports</option>
+            <option value="ucsc-club">UCSC Club</option>
+            <option value="social">Social</option>
+          </select>
         </div>
         <div className="flex items-center gap-4">
           <span className="text-gray-600">Welcome, {user?.name}</span>

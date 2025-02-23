@@ -6,9 +6,9 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
+import json
 import jwt
 import firebase_admin
-import json
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
 from google.oauth2 import id_token

@@ -15,6 +15,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
+from datetime import datetime
 
 from event import Event
 from helpers import get_user_email, get_id
@@ -241,7 +242,7 @@ def get_event_rsvps(event_id):
     rsvps = event.get_rsvps()
     return jsonify(rsvps), 200
 
-@app.route("/filter/<option>", methods=["GET"])
+@app.route("/filter_events/<option>", methods=["GET"])
 def filter_events(option):
     try:
         print("FILTER OPTION:", option)
@@ -252,6 +253,28 @@ def filter_events(option):
                 if event_obj.get("category") == option:
                     event_obj["eventId"] = event.id
                     state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)}), 500
+
+@app.route("/filter_times/<time>", methods=["GET"])
+def filter_times(time):
+    try:
+        print("FILTER OPTION:", time)
+        dt_object = datetime.strptime(time, "%Y-%m-%dT%H:%M")
+        currentTime = int(dt_object.timestamp())
+        state = {"events":[]}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            startTime_obj = event_obj.get("startTime")
+            endTime_obj = event_obj.get("endTime")
+            startTime = int(startTime_obj.timestamp())
+            endTime = int(endTime_obj.timestamp())
+            if startTime < currentTime and endTime > currentTime:
+                event_obj["eventId"] = event.id
+                state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
     except Exception as e:
         print(e)

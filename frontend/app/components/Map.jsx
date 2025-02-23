@@ -33,7 +33,7 @@ export default function Map() {
     description: "",
     startTime: "",
     endTime: "",
-    category: "general",
+    category: "",
     address: "",
     capacity: "",
     age_limit: ""
@@ -90,7 +90,7 @@ export default function Map() {
             description: event.description,
             startTime: event.startTime,
             endTime: event.endTime,
-            category: event.category,
+            category : event.category,
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
@@ -237,7 +237,7 @@ export default function Map() {
         description: "",
         startTime: "",
         endTime: "",
-        category: "general",
+        category: "",
         address: "",
       });
       alert("Event created successfully!");
@@ -302,7 +302,7 @@ export default function Map() {
         description: "",
         startTime: "",
         endTime: "",
-        category: "general",
+        category: "",
         address: "",
       });
       alert("Event updated successfully!");
@@ -350,7 +350,47 @@ export default function Map() {
   const filterEvents = async (option) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/filter/${option}`,
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/filter_events/${option}`,
+        {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) throw new Error("Failed to filter events");
+
+      const data = await response.json();
+      if (data.state?.events) {
+        setMarkers(
+          data.state.events.map((event) => ({
+            lat: event.location.latitude,
+            lng: event.location.longitude,
+            title: event.title,
+            description: event.description,
+            startTime: event.startTime,
+            endTime: event.endTime,
+            category: event.category,
+            address: event.address,
+            capacity: event.capacity,
+            age_limit: event.age_limit,
+            host: event.ownerEmail,
+            eventId: event.eventId,
+            rsvps: event.rsvps,
+          }))
+        );
+      }
+    } catch (error) {
+      console.error("Error filtering events:", error);
+    }
+  }
+
+  const filterTimes = async (time) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/filter_times/${time}`,
         {
           method: "GET",
           headers: {
@@ -440,6 +480,13 @@ export default function Map() {
     }
   };
 
+  function getLocalDatetime() {
+    const now = new Date();
+    // Adjust to local timezone by subtracting the offset
+    now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+    return now.toISOString().slice(0, 16);
+  }
+
   return (
     <div className="h-screen flex flex-col bg-gray-50">
       <header className="bg-white shadow-sm py-4 px-6 flex justify-between items-center">
@@ -455,20 +502,31 @@ export default function Map() {
           </button>
           <select
             className="w-full p-2 border rounded"
-            defaultValue="general"
+            defaultValue=""
             onChange={(e) => {
-              if (e.target.value === "general") {
+              if (e.target.value === "") {
                 fetchEvents()
               }else{
                 filterEvents(e.target.value)
               }
             }}
           >
+            <option value="">All Categories</option>
             <option value="general">General</option>
             <option value="sports">Sports</option>
             <option value="ucsc-club">UCSC Club</option>
             <option value="social">Social</option>
           </select>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <input
+            type="datetime-local"
+            className="p-2 border rounded"
+            defaultValue={getLocalDatetime()}
+            onChange={(e) =>
+              filterTimes(e.target.value)
+            }
+          />
         </div>
         <div className="flex items-center gap-4">
           <span className="text-gray-600">Welcome, {user?.name}</span>
@@ -598,6 +656,7 @@ export default function Map() {
                       setFormData({ ...formData, category: e.target.value })
                     }
                   >
+                    <option value="">All Categories</option>
                     <option value="general">General</option>
                     <option value="sports">Sports</option>
                     <option value="ucsc-club">UCSC Club</option>

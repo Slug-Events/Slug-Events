@@ -687,7 +687,7 @@ export default function Map() {
                     <h3 className="text-lg font-bold text-gray-800">
                       {selectedEvent.title}
                     </h3>
-                    {rsvps[selectedEvent.eventId]?.includes(user?.email) && (
+                    {(
                       <button
                         onClick={async () => {
                           try {

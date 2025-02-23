@@ -21,17 +21,20 @@ from helpers import get_user_email, get_id
 
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+PORT = os.getenv("PORT", "8080")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
-CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+CORS(app, supports_credentials=True, origins=[FRONTEND_URL])
 
 app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID", "your-client-id")
 app.config["GOOGLE_CLIENT_SECRET"] = os.getenv(
     "GOOGLE_CLIENT_SECRET", "your-client-secret"
 )
 app.config["GOOGLE_REDIRECT_URI"] = os.getenv(
-    "GOOGLE_REDIRECT_URI", "http://localhost:8080/authorize"
+    "GOOGLE_REDIRECT_URI", f"{BACKEND_URL}/authorize"
 )
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
@@ -269,4 +272,4 @@ def logout():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="localhost", port=8080)
+    app.run(debug=True, host="0.0.0.0", port=int(PORT))

@@ -8,6 +8,7 @@ import os
 import secrets
 import jwt
 import firebase_admin
+import google.auth
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
 from google.oauth2 import id_token
@@ -42,13 +43,17 @@ app.config.update(
 )
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
-
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"
-    )
+service_account_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"
 )
+
+if os.path.exists(service_account_path):
+    cred = credentials.Certificate(service_account_path)
+    print("Using service account key file.")
+else:
+    cred, project = google.auth.default()
+    print("Using Google Cloud default credentials.")
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 

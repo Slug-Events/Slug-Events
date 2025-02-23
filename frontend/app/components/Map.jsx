@@ -677,7 +677,6 @@ export default function Map() {
                 </div>
               </InfoWindow>
             )}
-
             {selectedEvent && (
               <InfoWindow
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
@@ -688,6 +687,36 @@ export default function Map() {
                     <h3 className="text-lg font-bold text-gray-800">
                       {selectedEvent.title}
                     </h3>
+                    {rsvps[selectedEvent.eventId]?.includes(user?.email) && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/add_to_calendar/${selectedEvent.eventId}`, {
+                              method: 'POST',
+                              headers: {
+                                'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                                'Content-Type': 'application/json'
+                              }
+                            });
+
+                            if (!response.ok) {
+                              throw new Error('Failed to add to calendar');
+                            }
+
+                            alert('Event added to your Google Calendar!');
+                          } catch (error) {
+                            if (error.message.includes('not authorized')) {
+                              window.location.href = '/login?next=' + window.location.pathname;
+                            } else {
+                              alert(error.message);
+                            }
+                          }
+                        }}
+                        className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors ml-2"
+                      >
+                        Add to Calendar
+                      </button>
+                    )}
                   </div>
                   <p className="text-sm text-gray-600 mb-3">
                     {selectedEvent.description}
@@ -746,7 +775,7 @@ export default function Map() {
                         <span className="text-xs font-medium text-gray-500 w-20">
                           Registration:
                         </span>
-                        <a
+                        <a  // Add this opening a tag
                           href={selectedEvent.registration}
                           className="text-xs text-blue-600 hover:underline"
                           target="_blank"
@@ -826,8 +855,8 @@ export default function Map() {
                     )}
                     {user?.email === selectedEvent?.host && (
                       <button
-                      onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
-                      className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                        onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
+                        className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
                       >
                         Delete Event
                       </button>
@@ -835,7 +864,7 @@ export default function Map() {
                   </div>
                 </div>
               </InfoWindow>
-              )}
+            )}
             <RsvpPanel
               isOpen={showRsvpList}
               onClose={() => setShowRsvpList(false)}

@@ -6,8 +6,8 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
-import jwt
 from datetime import datetime
+import jwt
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
@@ -274,7 +274,7 @@ def filter_times(time):
             end_time_obj = event_obj.get("endTime")
             start_time = int(start_time_obj.timestamp())
             end_time = int(end_time_obj.timestamp())
-            if start_time < current_time and end_time > current_time:
+            if start_time < current_time < end_time:
                 event_obj["eventId"] = event.id
                 state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})

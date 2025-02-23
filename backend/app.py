@@ -7,6 +7,7 @@ Flask backend for handling Google OAuth, database updates
 import os
 import secrets
 import jwt
+from datetime import datetime
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
@@ -15,7 +16,6 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
-from datetime import datetime
 
 from event import Event
 from helpers import get_user_email, get_id
@@ -244,15 +244,16 @@ def get_event_rsvps(event_id):
 
 @app.route("/filter_events/<option>", methods=["GET"])
 def filter_events(option):
+    """Endpoint for filtering displayed events by category"""
     try:
         print("FILTER OPTION:", option)
         state = {"events":[]}
         events = db.collection("events").stream()
         for event in events:
-                event_obj = event.to_dict()
-                if event_obj.get("category") == option:
-                    event_obj["eventId"] = event.id
-                    state["events"].append(event_obj)
+            event_obj = event.to_dict()
+            if event_obj.get("category") == option:
+                event_obj["eventId"] = event.id
+                state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
     except Exception as e:
         print(e)
@@ -260,19 +261,20 @@ def filter_events(option):
 
 @app.route("/filter_times/<time>", methods=["GET"])
 def filter_times(time):
+    """Endpoint for filtering displayed events by times"""
     try:
         print("FILTER OPTION:", time)
         dt_object = datetime.strptime(time, "%Y-%m-%dT%H:%M")
-        currentTime = int(dt_object.timestamp())
+        current_time = int(dt_object.timestamp())
         state = {"events":[]}
         events = db.collection("events").stream()
         for event in events:
             event_obj = event.to_dict()
-            startTime_obj = event_obj.get("startTime")
-            endTime_obj = event_obj.get("endTime")
-            startTime = int(startTime_obj.timestamp())
-            endTime = int(endTime_obj.timestamp())
-            if startTime < currentTime and endTime > currentTime:
+            start_time_obj = event_obj.get("startTime")
+            end_time_obj = event_obj.get("endTime")
+            start_time = int(start_time_obj.timestamp())
+            end_time = int(end_time_obj.timestamp())
+            if start_time < current_time and end_time > current_time:
                 event_obj["eventId"] = event.id
                 state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})

@@ -8,7 +8,7 @@ import os
 import secrets
 import jwt
 import firebase_admin
-import google.auth
+import json
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
 from google.oauth2 import id_token
@@ -51,7 +51,9 @@ if os.path.exists(service_account_path):
     cred = credentials.Certificate(service_account_path)
     print("Using service account key file.")
 else:
-    cred, project = google.auth.default()
+    firebase_key = os.getenv("FIREBASE_KEY")
+    assert firebase_key
+    cred = credentials.Certificate(json.loads(firebase_key))
     print("Using Google Cloud default credentials.")
 
 firebase_admin.initialize_app(cred)

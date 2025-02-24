@@ -6,6 +6,7 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 
 import os
 import secrets
+from datetime import datetime
 import jwt
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
@@ -62,7 +63,7 @@ def get_google_flow():
             "https://www.googleapis.com/auth/userinfo.email",
             "https://www.googleapis.com/auth/userinfo.profile",
             "https://www.googleapis.com/auth/calendar",
-            "openid",
+            "openid"
         ],
     )
 
@@ -365,6 +366,46 @@ def get_event_rsvps(event_id):
     event.event_id = event_id
     rsvps = event.get_rsvps()
     return jsonify(rsvps), 200
+
+@app.route("/filter_events/<option>", methods=["GET"])
+def filter_events(option):
+    """Endpoint for filtering displayed events by category"""
+    try:
+        print("FILTER OPTION:", option)
+        state = {"events":[]}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            if event_obj.get("category") == option:
+                event_obj["eventId"] = event.id
+                state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)}), 500
+
+@app.route("/filter_times/<time>", methods=["GET"])
+def filter_times(time):
+    """Endpoint for filtering displayed events by times"""
+    try:
+        print("FILTER OPTION:", time)
+        dt_object = datetime.strptime(time, "%Y-%m-%dT%H:%M")
+        current_time = int(dt_object.timestamp())
+        state = {"events":[]}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            start_time_obj = event_obj.get("startTime")
+            end_time_obj = event_obj.get("endTime")
+            start_time = int(start_time_obj.timestamp())
+            end_time = int(end_time_obj.timestamp())
+            if start_time < current_time < end_time:
+                event_obj["eventId"] = event.id
+                state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
+    except Exception as e:
+        print(e)
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/state")
 def get_state():

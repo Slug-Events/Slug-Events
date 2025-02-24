@@ -22,4 +22,4 @@ jobs:
     - name: Analysing the code with pylint
       working-directory: backend
       run: |
-        pylint $(git ls-files '*.py')
+        pylint --rcfile=.pylintrc $(git ls-files '*.py')

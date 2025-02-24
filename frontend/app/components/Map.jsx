@@ -612,7 +612,7 @@ export default function Map() {
             Create Event
           </button>
           <select
-            className="w-full p-2 border rounded"
+            className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
             defaultValue=""
             onChange={(e) => {
               if (e.target.value === "") {
@@ -632,7 +632,7 @@ export default function Map() {
         <div className="grid grid-cols-2 gap-2">
           <input
             type="datetime-local"
-            className="p-2 border rounded"
+            className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
             defaultValue={getLocalDatetime()}
             onChange={(e) =>
               filterTimes(e.target.value)

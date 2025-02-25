@@ -239,6 +239,61 @@ def add_to_calendar(event_id):
         "calendarEventId": calendar_event_id
     }), 200
 
+@app.route("/remove_from_calendar/<event_id>", methods=["DELETE"])
+def remove_event_from_calendar(event_id):
+    """Endpoint for removing an event from user's Google Calendar"""
+    user_email = get_user_email()
+    if not user_email:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    event = Event.get(event_id, db)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    user_creds = get_user_credentials()
+    if not user_creds:
+        return jsonify({"error": "Calendar authorization required"}), 401
+
+    try:
+        credentials = Credentials(
+            token=user_creds.get('token'),
+            refresh_token=user_creds.get('refresh_token'),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=app.config["GOOGLE_CLIENT_ID"],
+            client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+        )
+        
+        service = build('calendar', 'v3', credentials=credentials)
+
+        safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
+        
+        event_ref = db.collection("events").document(event_id)
+        event_doc = event_ref.get()
+        
+        if not event_doc.exists:
+            return jsonify({"error": "Event not found in database"}), 404
+            
+        calendar_events = event_doc.to_dict().get('calendar_events', {})
+        calendar_event_id = calendar_events.get(safe_email)
+        
+        if not calendar_event_id:
+            return jsonify({"error": "No calendar event found for this user"}), 404
+            
+        service.events().delete(
+            calendarId='primary',
+            eventId=calendar_event_id
+        ).execute()
+        
+        event_ref.update({
+            f"calendar_events.{safe_email}": DELETE_FIELD
+        })
+        
+        return jsonify({"message": "Event removed from calendar successfully"}), 200
+        
+    except Exception as e:
+        print(f"Error removing calendar event: {e}")
+        return jsonify({"error": f"Failed to remove calendar event: {str(e)}"}), 500
+
 @app.route("/create_event", methods=["POST"])
 def create_event():
     """Endpoint for creating an event"""
@@ -310,7 +365,7 @@ def rsvp_event(event_id):
 
 @app.route("/unrsvp/<event_id>", methods=["DELETE"])
 def unrsvp_event(event_id):
-    """Endpoint for removing user from rsvp list and calendar of an existing event"""
+    """Endpoint for removing user from rsvp list without removing from calendar"""
     user_email = get_user_email()
     if not user_email:
         return jsonify({"error": "Unauthorized"}), 401
@@ -319,37 +374,10 @@ def unrsvp_event(event_id):
     if not event:
         return jsonify({"error": "Event not found"}), 404
 
-    user_creds = get_user_credentials()
-    if user_creds:
-        try:
-            credentials = Credentials(
-                token=user_creds.get('token'),
-                refresh_token=user_creds.get('refresh_token'),
-                token_uri="https://oauth2.googleapis.com/token",
-                client_id=app.config["GOOGLE_CLIENT_ID"],
-                client_secret=app.config["GOOGLE_CLIENT_SECRET"],
-            )
-            service = build('calendar', 'v3', credentials=credentials)
-
-            safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
-            event_ref = db.collection("events").document(event_id)
-            event_doc = event_ref.get()
-            
-            if event_doc.exists:
-                calendar_events = event_doc.to_dict().get('calendar_events', {})
-                calendar_event_id = calendar_events.get(safe_email)
-                
-                if calendar_event_id:
-                    service.events().delete(
-                        calendarId='primary',
-                        eventId=calendar_event_id
-                    ).execute()
-                    
-                    event_ref.update({
-                        f"calendar_events.{safe_email}": firestore.DELETE_FIELD
-                    })
-        except Exception as e:
-            print(f"Error removing calendar event: {e}")
+    event.event_id = event_id
+    event.rsvp_remove(user_email)
+    
+    return jsonify({"message": "RSVP removed successfully"}), 200
 
     event.event_id = event_id
     event.rsvp_remove(user_email)

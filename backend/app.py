@@ -41,7 +41,6 @@ app.config["GOOGLE_REDIRECT_URI"] = os.getenv(
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
-    HTTP_ONLY=False
 )
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
@@ -81,6 +80,10 @@ def get_google_flow():
             "openid"
         ],
     )
+
+# if FRONTEND_URL is localhost http connection
+if FRONTEND_URL[:4] != "https":
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 @app.route("/login")
 def login():

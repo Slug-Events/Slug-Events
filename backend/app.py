@@ -29,7 +29,7 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
-CORS(app, supports_credentials=True, origins=[FRONTEND_URL])
+CORS(app, supports_credentials=True, origins=[FRONTEND_URL, f"{FRONTEND_URL}/map"])
 
 app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID", "your-client-id")
 app.config["GOOGLE_CLIENT_SECRET"] = os.getenv(

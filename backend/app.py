@@ -41,6 +41,7 @@ app.config["GOOGLE_REDIRECT_URI"] = os.getenv(
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
+    HTTP_ONLY=False
 )
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")

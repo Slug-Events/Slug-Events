@@ -114,8 +114,9 @@ def authorize():
 
     flow = get_google_flow()
     flow.redirect_uri = app.config["GOOGLE_REDIRECT_URI"]
-
+    print(flow)
     flow.fetch_token(authorization_response=request.url)
+    print(flow.credentials)
     auth_creds = flow.credentials
 
     try:

@@ -34,7 +34,7 @@ env:
       - RUNTIME
 
   - variable: NEXTAUTH_URL
-    value: "https://frontend-398513784123.us-central1.run.app"
+    value: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
     availability:
       - BUILD
       - RUNTIME

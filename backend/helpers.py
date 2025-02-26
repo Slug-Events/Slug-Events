@@ -17,7 +17,6 @@ def decode_jwt_token(token):
     except Exception:
         return None
 
-
 def authenticate_request():
     """Authenticates cookie from user"""
     auth_header = request.headers.get("Authorization")

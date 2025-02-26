@@ -5,23 +5,25 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 """
 
 import os
-import secrets
-import json
-from datetime import datetime
 import jwt
+import json
+import secrets
+from dotenv import load_dotenv
+from datetime import datetime
+
 import firebase_admin
+from firebase_admin import credentials, firestore
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
-from google.oauth2 import id_token
 from google.auth.transport.requests import Request
-from google_auth_oauthlib.flow import Flow
+from google.oauth2 import id_token
 from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from dotenv import load_dotenv
-from firebase_admin import credentials, firestore
 from google.cloud.firestore import DELETE_FIELD
+from google_auth_oauthlib.flow import Flow
+from googleapiclient.discovery import build
+
 from event import Event
-from helpers import get_user_email, get_id
+from helpers import get_user_email, get_user_credentials, get_id
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 PORT = os.getenv("PORT", "8080")
@@ -88,16 +90,10 @@ def get_google_flow():
 if FRONTEND_URL[:4] != "https":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-def decode_jwt_token(token):
-    """Decodes authorization cookie"""
-    try:
-        return jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-    except Exception:
-        return None
 
 def create_calendar_event(event, credentials_dict):
     """Creates Google Calendar event from RSVP"""
-    credentials = Credentials(
+    calendar_credentials = Credentials(
         token=credentials_dict.get('token'),
         refresh_token=credentials_dict.get('refresh_token'),
         token_uri="https://oauth2.googleapis.com/token",
@@ -105,8 +101,8 @@ def create_calendar_event(event, credentials_dict):
         client_secret=app.config["GOOGLE_CLIENT_SECRET"],
     )
 
-    service = build('calendar', 'v3', credentials=credentials)
-    
+    service = build('calendar', 'v3', credentials=calendar_credentials)
+
     event_body = {
         'summary': event.title,
         'description': event.description,
@@ -137,28 +133,6 @@ def create_calendar_event(event, credentials_dict):
     except Exception as e:
         print(f"Error creating calendar event: {e}")
         return None
-
-def authenticate_request():
-    """Authenticates cookie from user"""
-    auth_header = request.headers.get("Authorization")
-    if not auth_header or not auth_header.startswith("Bearer "):
-        return None
-    token = auth_header.split(" ")[1]
-    return decode_jwt_token(token)
-
-def get_user_email():
-    """Gets user email from request"""
-    decoded = authenticate_request()
-    if not decoded:
-        return ""
-    return decoded["user"]["email"]
-
-def get_user_credentials():
-    """Gets user Google credentials from request"""
-    decoded = authenticate_request()
-    if not decoded:
-        return None
-    return decoded.get("credentials")
 
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
@@ -231,91 +205,29 @@ def authorize():
     next_url = session.pop("next", "/")
     return redirect(f"{next_url}?token={jwt_token}")
 
-@app.route("/add_to_calendar/<event_id>", methods=["POST"])
-def add_to_calendar(event_id):
-    """Endpoint for adding event to Google Calendar"""
-    user_email = get_user_email()
-    if not user_email:
-        return jsonify({"error": "Unauthorized"}), 401
+@app.route("/logout")
+def logout():
+    """Endpoint for clearing users authorization cookie"""
+    session.clear()
+    response = redirect(url_for("/index"))
+    response.set_cookie("session", "", expires=0)
+    return response
 
-    event = Event.get(event_id, db)
-    if not event:
-        return jsonify({"error": "Event not found"}), 404
-
-    user_creds = get_user_credentials()
-    if not user_creds:
-        return jsonify({"error": "Calendar authorization required"}), 401
-
-    calendar_event_id = create_calendar_event(event, user_creds)
-    if not calendar_event_id:
-        return jsonify({"error": "Failed to create calendar event"}), 500
-
-    safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
-    
-    event_ref = db.collection("events").document(event_id)
-    event_ref.update({
-        f"calendar_events.{safe_email}": calendar_event_id
-    })
-
-    return jsonify({
-        "message": "Event added to calendar successfully",
-        "calendarEventId": calendar_event_id
-    }), 200
-
-@app.route("/remove_from_calendar/<event_id>", methods=["DELETE"])
-def remove_event_from_calendar(event_id):
-    """Endpoint for removing an event from user's Google Calendar"""
-    user_email = get_user_email()
-    if not user_email:
-        return jsonify({"error": "Unauthorized"}), 401
-
-    event = Event.get(event_id, db)
-    if not event:
-        return jsonify({"error": "Event not found"}), 404
-
-    user_creds = get_user_credentials()
-    if not user_creds:
-        return jsonify({"error": "Calendar authorization required"}), 401
-
+@app.route("/state")
+def get_state():
+    """Endpoint to retrieve map state from db"""
     try:
-        credentials = Credentials(
-            token=user_creds.get('token'),
-            refresh_token=user_creds.get('refresh_token'),
-            token_uri="https://oauth2.googleapis.com/token",
-            client_id=app.config["GOOGLE_CLIENT_ID"],
-            client_secret=app.config["GOOGLE_CLIENT_SECRET"],
-        )
-        
-        service = build('calendar', 'v3', credentials=credentials)
+        state = {"events": []}
+        events = db.collection("events").stream()
+        for event in events:
+            event_obj = event.to_dict()
+            event_obj["eventId"] = event.id
+            state["events"].append(event_obj)
+        return jsonify({"status": 200, "state": state})
 
-        safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
-        
-        event_ref = db.collection("events").document(event_id)
-        event_doc = event_ref.get()
-        
-        if not event_doc.exists:
-            return jsonify({"error": "Event not found in database"}), 404
-            
-        calendar_events = event_doc.to_dict().get('calendar_events', {})
-        calendar_event_id = calendar_events.get(safe_email)
-        
-        if not calendar_event_id:
-            return jsonify({"error": "No calendar event found for this user"}), 404
-            
-        service.events().delete(
-            calendarId='primary',
-            eventId=calendar_event_id
-        ).execute()
-        
-        event_ref.update({
-            f"calendar_events.{safe_email}": DELETE_FIELD
-        })
-        
-        return jsonify({"message": "Event removed from calendar successfully"}), 200
-        
     except Exception as e:
-        print(f"Error removing calendar event: {e}")
-        return jsonify({"error": f"Failed to remove calendar event: {str(e)}"}), 500
+        print(e)
+        return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/create_event", methods=["POST"])
 def create_event():
@@ -399,12 +311,8 @@ def unrsvp_event(event_id):
 
     event.event_id = event_id
     event.rsvp_remove(user_email)
-    
-    return jsonify({"message": "RSVP removed successfully"}), 200
 
-    event.event_id = event_id
-    event.rsvp_remove(user_email)
-    return jsonify({"message": "RSVP and calendar event removed successfully"}), 200
+    return jsonify({"message": "RSVP removed successfully"}), 200
 
 @app.route("/rsvps/<event_id>", methods=["GET"])
 def get_event_rsvps(event_id):
@@ -457,29 +365,92 @@ def filter_times(time):
         print(e)
         return jsonify({"status": 500, "error": str(e)}), 500
 
-@app.route("/state")
-def get_state():
-    """Endpoint to retrieve map state from db"""
+@app.route("/add_to_calendar/<event_id>", methods=["POST"])
+def add_to_calendar(event_id):
+    """Endpoint for adding event to Google Calendar"""
+    user_email = get_user_email()
+    if not user_email:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    event = Event.get(event_id, db)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    user_creds = get_user_credentials()
+    if not user_creds:
+        return jsonify({"error": "Calendar authorization required"}), 401
+
+    calendar_event_id = create_calendar_event(event, user_creds)
+    if not calendar_event_id:
+        return jsonify({"error": "Failed to create calendar event"}), 500
+
+    safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
+
+    event_ref = db.collection("events").document(event_id)
+    event_ref.update({
+        f"calendar_events.{safe_email}": calendar_event_id
+    })
+
+    return jsonify({
+        "message": "Event added to calendar successfully",
+        "calendarEventId": calendar_event_id
+    }), 200
+
+@app.route("/remove_from_calendar/<event_id>", methods=["DELETE"])
+def remove_event_from_calendar(event_id):
+    """Endpoint for removing an event from user's Google Calendar"""
+    user_email = get_user_email()
+    if not user_email:
+        return jsonify({"error": "Unauthorized"}), 401
+
+    event = Event.get(event_id, db)
+    if not event:
+        return jsonify({"error": "Event not found"}), 404
+
+    user_creds = get_user_credentials()
+    if not user_creds:
+        return jsonify({"error": "Calendar authorization required"}), 401
+
     try:
-        state = {"events": []}
-        events = db.collection("events").stream()
-        for event in events:
-            event_obj = event.to_dict()
-            event_obj["eventId"] = event.id
-            state["events"].append(event_obj)
-        return jsonify({"status": 200, "state": state})
+        calendar_credentials = Credentials(
+            token=user_creds.get('token'),
+            refresh_token=user_creds.get('refresh_token'),
+            token_uri="https://oauth2.googleapis.com/token",
+            client_id=app.config["GOOGLE_CLIENT_ID"],
+            client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+        )
+
+        service = build('calendar', 'v3', credentials=calendar_credentials)
+
+        safe_email = user_email.replace('@', '_at_').replace('.', '_dot_')
+
+        event_ref = db.collection("events").document(event_id)
+        event_doc = event_ref.get()
+
+        if not event_doc.exists:
+            return jsonify({"error": "Event not found in database"}), 404
+
+        calendar_events = event_doc.to_dict().get('calendar_events', {})
+        calendar_event_id = calendar_events.get(safe_email)
+
+        if not calendar_event_id:
+            return jsonify({"error": "No calendar event found for this user"}), 404
+ 
+        service.events().delete(
+            calendarId='primary',
+            eventId=calendar_event_id
+        ).execute()
+
+        event_ref.update({
+            f"calendar_events.{safe_email}": DELETE_FIELD
+        })
+
+        return jsonify({"message": "Event removed from calendar successfully"}), 200
 
     except Exception as e:
-        print(e)
-        return jsonify({"status": 500, "error": str(e)}), 500
+        print(f"Error removing calendar event: {e}")
+        return jsonify({"error": f"Failed to remove calendar event: {str(e)}"}), 500
 
-@app.route("/logout")
-def logout():
-    """Endpoint for clearing users authorization cookie"""
-    session.clear()
-    response = redirect(url_for("/index"))
-    response.set_cookie("session", "", expires=0)
-    return response
 
 if __name__ == "__main__":
     # app.run(debug=True, host="0.0.0.0", port=int(PORT))

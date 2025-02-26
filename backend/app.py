@@ -5,11 +5,12 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 """
 
 import os
-import jwt
 import json
 import secrets
-from dotenv import load_dotenv
 from datetime import datetime
+
+import jwt
+from dotenv import load_dotenv
 
 import firebase_admin
 from firebase_admin import credentials, firestore
@@ -435,7 +436,7 @@ def remove_event_from_calendar(event_id):
 
         if not calendar_event_id:
             return jsonify({"error": "No calendar event found for this user"}), 404
- 
+
         service.events().delete(
             calendarId='primary',
             eventId=calendar_event_id

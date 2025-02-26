@@ -6,6 +6,7 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 
 import os
 import secrets
+import json
 from datetime import datetime
 import jwt
 import firebase_admin
@@ -23,27 +24,42 @@ from event import Event
 from helpers import get_user_email, get_id
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
+PORT = os.getenv("PORT", "8080")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
-CORS(app, supports_credentials=True, origins=["http://localhost:3000"])
+CORS(app, supports_credentials=True, origins=[FRONTEND_URL, f"{FRONTEND_URL}/map"])
 
 app.config["GOOGLE_CLIENT_ID"] = os.getenv("GOOGLE_CLIENT_ID", "your-client-id")
-app.config["GOOGLE_CLIENT_SECRET"] = os.getenv("GOOGLE_CLIENT_SECRET", "your-client-secret")
-app.config["GOOGLE_REDIRECT_URI"] = os.getenv("GOOGLE_REDIRECT_URI", "http://localhost:8080/authorize")
+
+app.config["GOOGLE_CLIENT_SECRET"] = os.getenv(
+    "GOOGLE_CLIENT_SECRET", "your-client-secret"
+)
+app.config["GOOGLE_REDIRECT_URI"] = os.getenv(
+    "GOOGLE_REDIRECT_URI", f"{BACKEND_URL}/authorize"
+)
+
 app.config.update(
     SESSION_COOKIE_SAMESITE="None",
     SESSION_COOKIE_SECURE=True,
 )
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
-
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate(
-    os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"
-    )
+service_account_path = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"
 )
+
+if os.path.exists(service_account_path):
+    cred = credentials.Certificate(service_account_path)
+    print("Using service account key file.")
+else:
+    firebase_key = os.getenv("FIREBASE_KEY")
+    assert firebase_key
+    cred = credentials.Certificate(json.loads(firebase_key))
+    print("Using Google Cloud default credentials.")
+
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -66,6 +82,11 @@ def get_google_flow():
             "openid"
         ],
     )
+
+
+# if FRONTEND_URL is localhost http connection
+if FRONTEND_URL[:4] != "https":
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 def decode_jwt_token(token):
     """Decodes authorization cookie"""
@@ -172,8 +193,9 @@ def authorize():
 
     flow = get_google_flow()
     flow.redirect_uri = app.config["GOOGLE_REDIRECT_URI"]
-
+    print(flow)
     flow.fetch_token(authorization_response=request.url)
+    print(flow.credentials)
     auth_creds = flow.credentials
 
     try:
@@ -460,4 +482,5 @@ def logout():
     return response
 
 if __name__ == "__main__":
+    # app.run(debug=True, host="0.0.0.0", port=int(PORT))
     app.run(debug=True, host="localhost", port=8080)

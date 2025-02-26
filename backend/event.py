@@ -24,6 +24,7 @@ class Event:
         address: str="",
         capacity: Optional[int] = None,
         age_limit: Optional[int] = None,
+        image: Optional[str] = None,
         event_id: Optional[str] = None,
     ) -> None:
         self.event_id = event_id
@@ -36,6 +37,7 @@ class Event:
         self.category = category
         self.capacity = capacity
         self.age_limit = age_limit
+        self.image = image
         self.owner_email = owner_email
         self.db = db
         self.created_at = datetime.now()
@@ -53,6 +55,7 @@ class Event:
             "category": self.category,
             "capacity": self.capacity,
             "age_limit": self.age_limit,
+            "image": self.image,
             "ownerEmail": self.owner_email,
             "createdAt": self.created_at,
             "status": self.status,
@@ -87,6 +90,7 @@ class Event:
             category=event_data.get("category"),
             capacity=event_data.get("capacity"),
             age_limit=int(event_data.get("age_limit")),
+            image=event_data.get("image"),
             owner_email=user_email,
             db = db
         )
@@ -109,6 +113,7 @@ class Event:
                 category=data["category"],
                 capacity=data.get("capacity"),
                 age_limit=data.get("age_limit"),
+                image=data.get("image"),
                 event_id=event_id,
                 owner_email=data["ownerEmail"],
                 db = db

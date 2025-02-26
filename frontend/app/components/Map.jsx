@@ -118,7 +118,8 @@ export default function Map() {
     category: "",
     address: "",
     capacity: "",
-    age_limit: ""
+    age_limit: "",
+    image: ""
   });
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
@@ -205,6 +206,7 @@ export default function Map() {
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
+            image: event.image,
             host: event.ownerEmail,
             eventId: event.eventId,
             rsvps: event.rsvps,
@@ -487,6 +489,7 @@ export default function Map() {
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
+            image: event.image,
             host: event.ownerEmail,
             eventId: event.eventId,
             rsvps: event.rsvps,
@@ -527,6 +530,7 @@ export default function Map() {
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
+            image: event.image,
             host: event.ownerEmail,
             eventId: event.eventId,
             rsvps: event.rsvps,
@@ -596,6 +600,15 @@ export default function Map() {
     // Adjust to local timezone by subtracting the offset
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
+  }
+
+  function encodeImageToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+    });
   }
   
   return (
@@ -696,7 +709,7 @@ export default function Map() {
                   setSelectedLocation(null);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg p-4 min-w-[300px] space-y-3`}>
+                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Create New Event
                   </h3>
@@ -739,7 +752,7 @@ export default function Map() {
                       type="number"
                       placeholder="Age Limit (optional)"
                       className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
-                      value={formData.ageLimit}
+                      value={formData.age_limit}
                       onChange={(e) =>
                         setFormData({ ...formData, age_limit: e.target.value })
                       }
@@ -793,6 +806,32 @@ export default function Map() {
                       setFormData({ ...formData, description: e.target.value })
                     }
                   />
+
+                  <div className="mb-2">
+                    <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                      Event Banner (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      id="image-upload"
+                      accept="image/*"
+                      className="w-full p-2 border rounded"
+                      onChange={async (e) =>
+                        {
+                          if(e.target.files[0].size > 286720) {
+                            alert("File is too big! Please ensure it is less than 280KB.");
+                            e.target.value = "";
+                          }
+                          else {
+                            const image_base64String = await encodeImageToBase64(e.target.files[0]);
+                            console.log("Uploaded image in base64: ", image_base64String);
+                            setFormData({ ...formData, image: image_base64String });
+                          }
+                        }
+                      }
+                    />
+                  </div>
+
                   <button
                     onClick={handleCreateEvent}
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
@@ -810,7 +849,7 @@ export default function Map() {
                   setShowEditForm(false);
                 }}
               >
-                <div className="bg-white rounded-lg p-4 min-w-[300px] space-y-3">
+                <div className="bg-white rounded-lg min-w-[300px]">
                   <h3 className="font-bold text-lg border-b pb-2">
                     Edit Event
                   </h3>
@@ -906,6 +945,32 @@ export default function Map() {
                       setFormData({ ...formData, description: e.target.value })
                     }
                   />
+
+                  <div className="mb-2">
+                    <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                      Event Banner (Optional)
+                    </label>
+                    <input
+                      type="file"
+                      id="image-upload"
+                      accept="image/*"
+                      className="w-full p-2 border rounded"
+                      onChange={async (e) =>
+                        {
+                          if(e.target.files[0].size > 286720) {
+                            alert("File is too big! Please ensure it is less than 280KB.");
+                            e.target.value = "";
+                          }
+                          else {
+                            const image_base64String = await encodeImageToBase64(e.target.files[0]);
+                            console.log("Uploaded image in base64: ", image_base64String);
+                            setFormData({ ...formData, image: image_base64String });
+                          }
+                        }
+                      }
+                    />
+                  </div>
+
                   <button
                     onClick={handleEditEvent}
                     className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
@@ -921,17 +986,18 @@ export default function Map() {
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
                 onCloseClick={() => setSelectedEvent(null)}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg p-4 min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg min-w-[300px]`}>
+                  {selectedEvent.image && (
+                    <div 
+                      className="h-32 bg-cover bg-center mb-2"
+                      style={{
+                      backgroundImage: `url(${selectedEvent.image})`}}
+                    ></div>
+                  )}
                   <div className="flex justify-between items-start mb-2">
                     <h3 className={`text-lg font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
                       {selectedEvent.title}
                     </h3>
-                    <button
-                      onClick={() => setSelectedEvent(null)}
-                      className={`${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
-                      ✕
-                    </button>
                   </div>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-600'} mb-3`}>
                     {selectedEvent.description}
@@ -982,7 +1048,7 @@ export default function Map() {
                         Age Limit:
                       </span>
                       <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                        {selectedEvent.ageLimit || "None"}
+                        {selectedEvent.age_limit || "None"}
                       </span>
                     </div>
                     {selectedEvent.registration && (
@@ -1053,8 +1119,9 @@ export default function Map() {
                               description: selectedEvent.description,
                               startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
                               endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
-                              capacity: selectedEvent.capacity,
+                              capacity: selectedEvent.capacity || "None",
                               age_limit: selectedEvent.age_limit || "None",
+                              image: selectedEvent.image,
                               registration: selectedEvent.registration,
                               category: selectedEvent.category,
                               address: selectedEvent.address,

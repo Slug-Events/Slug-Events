@@ -153,6 +153,107 @@ export default function Map() {
     document.body.classList.toggle("dark", !isDarkMode);
   };
 
+  const handleRemoveFromCalendar = async (eventId) => {
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/remove_from_calendar/${eventId}`,
+        {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+  
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove from calendar');
+      }
+  
+      alert('Event removed from your Google Calendar!');
+      
+      // Update local state to reflect the change immediately
+      if (selectedEvent) {
+        const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
+        
+        // Create a new calendar_events object without the user's entry
+        const updatedCalendarEvents = {...selectedEvent.calendar_events};
+        delete updatedCalendarEvents[safeEmail];
+        
+        // Update the selected event with new calendar_events
+        setSelectedEvent({
+          ...selectedEvent,
+          calendar_events: updatedCalendarEvents
+        });
+        
+        // Also update the event in the markers array
+        setMarkers(markers.map(marker => 
+          marker.eventId === eventId 
+            ? {...marker, calendar_events: updatedCalendarEvents}
+            : marker
+        ));
+      }
+      
+      // Optionally, still fetch events to ensure backend and frontend are in sync
+      fetchEvents();
+    } catch (error) {
+      alert(error.message);
+    }
+  };
+
+  const handleAddToCalendar = async (eventId) => {
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/add_to_calendar/${eventId}`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to add to calendar');
+      }
+  
+      const data = await response.json();
+      const calendarEventId = data.calendarEventId;
+      
+      alert('Event added to your Google Calendar!');
+      
+      if (selectedEvent) {
+        const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
+        
+        // Create a new calendar_events object with the user's new entry
+        const updatedCalendarEvents = {
+          ...selectedEvent.calendar_events,
+          [safeEmail]: calendarEventId
+        };
+        
+        // Update the selected event with new calendar_events
+        setSelectedEvent({
+          ...selectedEvent,
+          calendar_events: updatedCalendarEvents
+        });
+        
+        // Also update the event in the markers array
+        setMarkers(markers.map(marker => 
+          marker.eventId === eventId 
+            ? {...marker, calendar_events: updatedCalendarEvents}
+            : marker
+        ));
+      }
+      
+      fetchEvents();
+    } catch (error) {
+      if (error.message.includes('not authorized')) {
+        window.location.href = '/login?next=' + window.location.pathname;
+      } else {
+        alert(error.message);
+      }
+    }
+  };
+
   useEffect(() => {
     const handleToken = () => {
       const token = new URLSearchParams(window.location.search).get("token");
@@ -189,6 +290,8 @@ export default function Map() {
         }
       );
 
+
+
       if (!response.ok) throw new Error("Failed to fetch events");
 
       const data = await response.json();
@@ -208,6 +311,7 @@ export default function Map() {
             host: event.ownerEmail,
             eventId: event.eventId,
             rsvps: event.rsvps,
+            calendar_events: event.calendar_events || {}
           }))
         );
       }
@@ -248,7 +352,11 @@ export default function Map() {
           method: "DELETE",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
+            "Content-Type": "application/json",
           },
+          body: JSON.stringify({
+            keepInCalendar: true
+          }),
         }
       );
 
@@ -915,7 +1023,6 @@ export default function Map() {
                 </div>
               </InfoWindow>
             )}
-
             {selectedEvent && (
               <InfoWindow
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
@@ -1009,6 +1116,36 @@ export default function Map() {
                       </span>
                     </div>
                     
+                    {/* Calendar Controls Section */}
+                    <div className="mt-2 pt-2 border-t">
+                      {(() => {
+                        // Check if this event is in the user's calendar
+                        const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
+                        const isInCalendar = selectedEvent?.calendar_events && 
+                                            selectedEvent?.calendar_events[safeEmail];
+                        
+                        return (
+                          <div className="flex justify-between items-center">
+                            {isInCalendar ? (
+                              <button
+                                onClick={() => handleRemoveFromCalendar(selectedEvent.eventId)}
+                                className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                              >
+                                Remove from Calendar
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handleAddToCalendar(selectedEvent.eventId)}
+                                className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
+                              >
+                                Add to Calendar
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
+                    </div>
+                    
                     {/* RSVP Section */}
                     <div className="mt-4 space-y-2 border-t pt-4">
                       <div className="flex justify-between items-center">
@@ -1030,7 +1167,6 @@ export default function Map() {
                           )}
                           <button
                             onClick={(e) => {
-                              const rect = e.target.getBoundingClientRect();
                               setShowRsvpList(!showRsvpList);
                             }}
                             className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
@@ -1044,8 +1180,9 @@ export default function Map() {
                       </div>
                     </div>
                     
-                    {selectedEvent.host == user?.email && (
-                      <div className="flex items-center">
+                    {/* Event Owner Actions */}
+                    {selectedEvent.host === user?.email && (
+                      <div className="flex flex-col space-y-2 mt-4 pt-4 border-t">
                         <button
                           onClick={() => {
                             setFormData({
@@ -1063,23 +1200,22 @@ export default function Map() {
                             setSelectedEventId(selectedEvent.eventId);
                             setSelectedEvent(null);
                           }}
-                          className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2">
+                          className="bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                        >
                           Edit Event
                         </button>
+                        <button
+                          onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
+                          className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
+                        >
+                          Delete Event
+                        </button>
                       </div>
-                    )}
-                    {user?.email === selectedEvent?.host && (
-                      <button
-                      onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
-                      className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
-                      >
-                        Delete Event
-                      </button>
                     )}
                   </div>
                 </div>
               </InfoWindow>
-              )}
+            )}
             <RsvpPanel
               isOpen={showRsvpList}
               onClose={() => setShowRsvpList(false)}

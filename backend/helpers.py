@@ -34,6 +34,12 @@ def get_user_email():
     user_email = decoded["user"]["email"]
     return user_email
 
+def get_user_credentials():
+    """Gets user Google credentials from request"""
+    decoded = authenticate_request()
+    if not decoded:
+        return None
+    return decoded.get("credentials")
 
 def get_id():
     """gets event id from request"""
@@ -45,7 +51,6 @@ def get_id():
     if not event_id:
         return jsonify({"error": "Missing event ID"}), 400
     return event_id
-
 
 
 def validate_event_data(event_data):

@@ -1,56 +1,24 @@
-# App Hosting Configuration for Cloud Run
+# apphosting.yaml
+cloudRun:
+  service:
+    environmentVariables:
+      FIREBASE_CONFIG: '{"databaseURL":"","projectId":"slug-events-448506","storageBucket":""}'
+      NEXTAUTH_SECRET: "1"
+      NEXT_PUBLIC_LOGIN_URL: "https://slug-events-398513784123.us-west1.run.app/login"
+      NEXT_PUBLIC_BACKEND_URL: "https://slug-events-398513784123.us-west1.run.app"
+      NEXTAUTH_URL: "https://slug-events-next-app--slug-events-448506.us-central1.hosted.app"
 
-runConfig:
-  minInstances: 2
-  maxInstances: 100
-  concurrency: 100
-  cpu: 2
-  memoryMiB: 1024
+    secretEnvironmentVariables:
+      - secret: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+        key: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
+      - secret: CLIENT_ID
+        key: GOOGLE_CLIENT_ID
+      - secret: CLIENT_SECRET
+        key: GOOGLE_CLIENT_SECRET
 
-# Environment variables
-env:
-  - variable: FIREBASE_CONFIG
-    value: '{"databaseURL":"","projectId":"slug-events-448506","storageBucket":""}'
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: NEXTAUTH_SECRET
-    value: "1"
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: NEXT_PUBLIC_LOGIN_URL
-    value: "https://slug-events-398513784123.us-west1.run.app/login"
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: NEXT_PUBLIC_BACKEND_URL
-    value: "https://slug-events-398513784123.us-west1.run.app"
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: NEXTAUTH_URL
-    value: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
-    availability:
-      - BUILD
-      - RUNTIME
-
-# Secrets exposed as environment variables
-  - variable: NEXT_PUBLIC_GOOGLE_MAPS_AF
-    secret: NEXT_PUBLIC_GOOGLE_MAPS_AF
-    availability:
-      - RUNTIME
-
-  - variable: GOOGLE_CLIENT_ID
-    secret: CLIENT_ID
-    availability:
-      - RUNTIME
-
-  - variable: GOOGLE_CLIENT_SECRET
-    secret: CLIENT_SECRET
-    availability:
-      - RUNTIME
+  runConfig:
+    minInstances: 2
+    maxInstances: 100
+    concurrency: 100
+    cpu: 2
+    memoryMiB: 1024

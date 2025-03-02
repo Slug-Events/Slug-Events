@@ -1,0 +1,34 @@
+steps:
+  # 1) Build step: install dependencies, fetch secrets, set env vars, build Next.js
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'build-step'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+
+        npm install
+
+        export FIREBASE_CONFIG='{"databaseURL":"","projectId":"slug-events-448506","storageBucket":""}'
+        export NEXTAUTH_SECRET="1"
+        export NEXT_PUBLIC_LOGIN_URL="https://slug-events-398513784123.us-west1.run.app/login"
+        export NEXT_PUBLIC_BACKEND_URL="https://slug-events-398513784123.us-west1.run.app"
+        export NEXTAUTH_URL="https://slug-events-next-app--slug-events-448506.us-central1.hosted.app"
+
+        export NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=$(gcloud secrets versions access latest --secret="NEXT_PUBLIC_GOOGLE_MAPS_API_KEY")
+        export GOOGLE_CLIENT_ID=$(gcloud secrets versions access latest --secret="CLIENT_ID")
+        export GOOGLE_CLIENT_SECRET=$(gcloud secrets versions access latest --secret="CLIENT_SECRET")
+
+
+        npm run build
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    id: 'deploy-step'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        firebase deploy --only hosting
+
+# Optional: If you’re building/pushing a Docker image, you can define images here
+# images:
+#   - gcr.io/$PROJECT_ID/your-image-name

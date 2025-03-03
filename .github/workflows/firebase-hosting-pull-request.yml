@@ -19,7 +19,7 @@ jobs:
         env:
           FIREBASE_CONFIG: '{"databaseURL":"","projectId":"slug-events-448506","storageBucket":"slug-events-448506.firebasestorage.app"}'
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          NEXT_PUBLIC_SECRET: ${{ secrets.NEXT_PUBLIC_SECRET }}
+          SECRET: ${{ secrets.NEXT_PUBLIC_SECRET }}
           NEXTAUTH_URL: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
           NEXT_PUBLIC_LOGIN_URL: "https://slug-events-398513784123.us-west1.run.app/login"
           NEXT_PUBLIC_BACKEND_URL: "https://slug-events-398513784123.us-west1.run.app"

@@ -20,8 +20,7 @@
       ],
       "params": {
         "NEXT_PUBLIC_LOGIN_URL": "https://slug-events-398513784123.us-west1.run.app/login",
-        "NEXT_PUBLIC_BACKEND_URL": "https://slug-events-398513784123.us-west1.run.app",
-        "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY": "AIzaSyCpYFAuo2tDBiY7HWZfvvySadu6bDboWyo"
+        "NEXT_PUBLIC_BACKEND_URL": "https://slug-events-398513784123.us-west1.run.app"
       }
     }
   ]

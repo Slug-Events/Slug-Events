@@ -4,8 +4,8 @@ import GoogleProvider from "next-auth/providers/google";
 const handler = NextAuth({
   providers: [
     GoogleProvider({
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      clientId: process.env.GOOGLE_CLIENT_ID || "",
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || "",
     }),
   ],
   pages: {
@@ -13,17 +13,19 @@ const handler = NextAuth({
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Handle redirection after sign-in
-      if (url === baseUrl || url === `${baseUrl}/api/auth/callback/google`) {
-        return baseUrl + "/map"; // Redirect to /map after login
-      }
+      // Ensure valid redirect URL
+      const validRedirectUrls = [
+        baseUrl,
+        `${baseUrl}/api/auth/callback/google`
+      ];
 
-      // Handle redirection after sign-out or other cases
-      return url.startsWith(baseUrl) ? url : baseUrl;
+      return validRedirectUrls.includes(url) ? `${baseUrl}/map` : (url.startsWith(baseUrl) ? url : baseUrl);
     },
-    async session({ session, token, user }) {
-      // Attach additional properties to the session object
-      session.user.id = token.sub;
+    async session({ session, token }) {
+      // Ensure user ID is properly assigned
+      if (token?.sub) {
+        session.user.id = token.sub;
+      }
       return session;
     },
   },

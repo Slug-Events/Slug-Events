@@ -2,14 +2,13 @@
 
 export default function LoginButton() {
   const handleLogin = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_LOGIN_URL;
-    console.log(backendUrl)
-    if (!backendUrl) {
+    const loginUrl = process.env.NEXT_PUBLIC_LOGIN_URL || "https://slug-events-398513784123.us-west1.run.app/login";
+    if (!loginUrl) {
       console.error("Environment variable NEXT_PUBLIC_LOGIN_URL is not defined.");
       return;
     }
     const nextUrl = `${window.location.origin}/map`;
-    window.location.href = `${backendUrl}?next=${encodeURIComponent(nextUrl)}`;
+    window.location.href = `${loginUrl}?next=${encodeURIComponent(nextUrl)}`;
   };
 
   return (

@@ -16,6 +16,7 @@ const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-398513784123.us-west1.run.app"
 
 const lightModeMap = [];
 const darkModeMap = [
@@ -157,7 +158,7 @@ export default function Map() {
   const handleRemoveFromCalendar = async (eventId) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/remove_from_calendar/${eventId}`,
+        `${BACKEND_URL}/remove_from_calendar/${eventId}`,
         {
           method: 'DELETE',
           headers: {
@@ -205,7 +206,7 @@ export default function Map() {
 
   const handleAddToCalendar = async (eventId) => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/add_to_calendar/${eventId}`, {
+      const response = await fetch(`${BACKEND_URL}/add_to_calendar/${eventId}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -281,7 +282,7 @@ export default function Map() {
   const fetchEvents = async () => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/state`,
+        `${BACKEND_URL}/state`,
         {
           method: "GET",
           headers: {
@@ -325,7 +326,7 @@ export default function Map() {
   const handleRsvp = async (eventId) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/rsvp/${eventId}`,
+        `${BACKEND_URL}/rsvp/${eventId}`,
         {
           method: "POST",
           headers: {
@@ -349,7 +350,7 @@ export default function Map() {
   const handleUnrsvp = async (eventId) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/unrsvp/${eventId}`,
+        `${BACKEND_URL}/unrsvp/${eventId}`,
         {
           method: "DELETE",
           headers: {
@@ -380,7 +381,7 @@ export default function Map() {
       if (selectedEvent?.eventId) {
         try {
           const response = await fetch(
-            `${process.env.NEXT_PUBLIC_BACKEND_URL}/rsvps/${selectedEvent.eventId}`,
+            `${BACKEND_URL}/rsvps/${selectedEvent.eventId}`,
             {
               headers: {
                 Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -417,7 +418,7 @@ export default function Map() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/create_event`,
+        `${BACKEND_URL}/create_event`,
         {
           method: "POST",
           headers: {
@@ -480,7 +481,7 @@ export default function Map() {
     // }
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/update_event`,
+        `${BACKEND_URL}/update_event`,
         {
           method: "POST",
           headers: {
@@ -546,7 +547,7 @@ export default function Map() {
 
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/delete_event/${selectedEvent.eventId}`,
+        `${BACKEND_URL}/delete_event/${selectedEvent.eventId}`,
         {
           method: "DELETE",
 
@@ -571,7 +572,7 @@ export default function Map() {
   const filterEvents = async (option) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/filter_events/${option}`,
+        `${BACKEND_URL}/filter_events/${option}`,
         {
           method: "GET",
           headers: {
@@ -612,7 +613,7 @@ export default function Map() {
   const filterTimes = async (time) => {
     try {
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL}/filter_times/${time}`,
+        `${BACKEND_URL}/filter_times/${time}`,
         {
           method: "GET",
           headers: {

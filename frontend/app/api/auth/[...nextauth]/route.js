@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 
-const handler = NextAuth({
+export const authOptions = {
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -13,22 +13,14 @@ const handler = NextAuth({
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
-      // Ensure valid redirect URL
-      const validRedirectUrls = [
-        baseUrl,
-        `${baseUrl}/api/auth/callback/google`
-      ];
-
-      return validRedirectUrls.includes(url) ? `${baseUrl}/map` : (url.startsWith(baseUrl) ? url : baseUrl);
+      return url.startsWith(baseUrl) ? url : baseUrl + "/map";
     },
     async session({ session, token }) {
-      // Ensure user ID is properly assigned
-      if (token?.sub) {
-        session.user.id = token.sub;
-      }
+      session.user.id = token?.sub || "";
       return session;
     },
   },
-});
+};
 
+const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };

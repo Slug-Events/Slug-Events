@@ -20,17 +20,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create .env.production file
+      - name: Create .env.local file
         run: |
-          # Echo each env var or secret into .env.production
-          echo "FIREBASE_CONFIG=${{ secrets.FIREBASE_CONFIG }}" >> .env.production
-          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.production
-          echo "NEXTAUTH_URL=slug-events-next-app--slug-events-448506.us-central1.hosted.app" >> .env.production
-          echo "NEXT_PUBLIC_LOGIN_URL=https://slug-events-398513784123.us-west1.run.app/login" >> .env.production
-          echo "NEXT_PUBLIC_BACKEND_URL=https://slug-events-398513784123.us-west1.run.app" >> .env.production
-          echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> .env.production
-          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.production
-          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.production
+          # Echo each env var or secret into .env.local
+          echo "FIREBASE_CONFIG=${{ secrets.FIREBASE_CONFIG }}" >> .env.local
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
+          echo "NEXTAUTH_URL=slug-events-next-app--slug-events-448506.us-central1.hosted.app" >> .env.local
+          echo "NEXT_PUBLIC_LOGIN_URL=https://slug-events-398513784123.us-west1.run.app/login" >> .env.local
+          echo "NEXT_PUBLIC_BACKEND_URL=https://slug-events-398513784123.us-west1.run.app" >> .env.local
+          echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> .env.local
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.local
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.local
 
       - name: Install dependencies and build
         run: |

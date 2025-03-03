@@ -1,56 +1,47 @@
-# App Hosting Configuration for Cloud Run
-
+# Settings for Backend (on Cloud Run).
+# See https://firebase.google.com/docs/app-hosting/configure#cloud-run
 runConfig:
-  minInstances: 2
+  minInstances: 0
   maxInstances: 100
-  concurrency: 100
-  cpu: 2
-  memoryMiB: 1024
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
 
-# Environment variables
+# Environment variables and secrets.
 env:
+  # Configure environment variables.
+  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
   - variable: FIREBASE_CONFIG
-    value: '{"databaseURL":"","projectId":"slug-events-448506","storageBucket":""}'
+    value: {"databaseURL":"","projectId":"slug-events-448506","storageBucket":"slug-events-448506.firebasestorage.app"}
     availability:
       - BUILD
       - RUNTIME
-
   - variable: NEXTAUTH_SECRET
     value: "1"
     availability:
       - BUILD
       - RUNTIME
-
+  - variable: NEXTAUTH_URL
+    value: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
+    availability:
+      - BUILD
+      - RUNTIME
   - variable: NEXT_PUBLIC_LOGIN_URL
     value: "https://slug-events-398513784123.us-west1.run.app/login"
     availability:
       - BUILD
       - RUNTIME
-
   - variable: NEXT_PUBLIC_BACKEND_URL
     value: "https://slug-events-398513784123.us-west1.run.app"
     availability:
       - BUILD
       - RUNTIME
 
-  - variable: NEXTAUTH_URL
-    value: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
-    availability:
-      - BUILD
-      - RUNTIME
-
-# Secrets exposed as environment variables
+  # Grant access to secrets in Cloud Secret Manager.
+  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
   - variable: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    secret: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
-    availability:
-      - RUNTIME
-
+    secret: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY@latest
   - variable: GOOGLE_CLIENT_ID
-    secret: CLIENT_ID
-    availability:
-      - RUNTIME
-
+    secret:  CLIENT_ID@latest
   - variable: GOOGLE_CLIENT_SECRET
-    secret: CLIENT_SECRET
-    availability:
-      - RUNTIME
+    secret: CLIENT_SECRET@latest

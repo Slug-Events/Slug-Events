@@ -12,17 +12,12 @@ jobs:
   build_and_preview:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
-
-    # Tells GitHub this job uses your "production" environment,
-    # so environment secrets from that environment are accessible.
     environment: production
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create .env.local file
+      - name: Set up environment variables
         run: |
-          # Echo each env var or secret into .env.local
           echo "FIREBASE_CONFIG=${{ secrets.FIREBASE_CONFIG }}" >> .env.local
           echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
           echo "NEXTAUTH_URL=slug-events-next-app--slug-events-448506.us-central1.hosted.app" >> .env.local
@@ -31,12 +26,13 @@ jobs:
           echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> .env.local
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.local
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.local
+        working-directory: ./frontend
 
       - name: Install dependencies and build
         run: |
-          cd frontend
           npm ci
           npm run build
+        working-directory: ./frontend
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

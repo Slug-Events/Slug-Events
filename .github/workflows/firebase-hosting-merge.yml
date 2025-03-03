@@ -14,13 +14,13 @@ jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
 
-    # # Use the "production" environment so we can access environment secrets defined there
-    # environment: production
+    # Reference the "production" environment to access its secrets
+    environment: production
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Make environment variables
+      - name: Set up environment variables
         run: |
           echo "FIREBASE_CONFIG=${{ secrets.FIREBASE_CONFIG }}" >> .env.local
           echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.local
@@ -31,12 +31,13 @@ jobs:
           echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> .env.local
           echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.local
           echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.local
+        working-directory: ./frontend
 
       - name: Install dependencies and build
         run: |
-          cd frontend
           npm ci
           npm run build
+        working-directory: ./frontend
 
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:

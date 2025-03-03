@@ -1,26 +1,36 @@
 name: Deploy to Firebase Hosting on PR
 
-on: pull_request
+on:
+  pull_request:
 
 permissions:
   checks: write
   contents: read
   pull-requests: write
-env:
-  FIREBASE_CONFIG: '{"databaseURL":"","projectId":"slug-events-448506","storageBucket":"slug-events-448506.firebasestorage.app"}'
-  NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-  NEXTAUTH_URL: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
-  NEXT_PUBLIC_LOGIN_URL: "https://slug-events-398513784123.us-west1.run.app/login"
-  NEXT_PUBLIC_BACKEND_URL: "https://slug-events-398513784123.us-west1.run.app"
-  NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}
-  GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
-  GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+
 jobs:
   build_and_preview:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
+
+    # Tells GitHub this job uses your "production" environment,
+    # so environment secrets from that environment are accessible.
+    environment: production
+
     steps:
       - uses: actions/checkout@v4
+
+      - name: Create .env.production file
+        run: |
+          # Echo each env var or secret into .env.production
+          echo "FIREBASE_CONFIG=${{ secrets.FIREBASE_CONFIG }}" >> .env.production
+          echo "NEXTAUTH_SECRET=${{ secrets.NEXTAUTH_SECRET }}" >> .env.production
+          echo "NEXTAUTH_URL=slug-events-next-app--slug-events-448506.us-central1.hosted.app" >> .env.production
+          echo "NEXT_PUBLIC_LOGIN_URL=https://slug-events-398513784123.us-west1.run.app/login" >> .env.production
+          echo "NEXT_PUBLIC_BACKEND_URL=https://slug-events-398513784123.us-west1.run.app" >> .env.production
+          echo "NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY }}" >> .env.production
+          echo "GOOGLE_CLIENT_ID=${{ secrets.GOOGLE_CLIENT_ID }}" >> .env.production
+          echo "GOOGLE_CLIENT_SECRET=${{ secrets.GOOGLE_CLIENT_SECRET }}" >> .env.production
 
       - name: Install dependencies and build
         run: |

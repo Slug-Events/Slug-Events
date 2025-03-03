@@ -15,20 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      # Step 1: Checkout repository
       - uses: actions/checkout@v4
-
-      # Step 2: Install dependencies and build with environment variables
       - name: Install dependencies and build
         run: |
           cd frontend
           npm ci
           npm run build
         env:
-          # The same environment variables defined in apphosting.yaml
-          # (Hard-coded or pulled from secrets depending on sensitivity.)
+
           FIREBASE_CONFIG: '{"databaseURL":"","projectId":"slug-events-448506","storageBucket":"slug-events-448506.firebasestorage.app"}'
-          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}        # or "1" if you truly want it hard-coded
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
           NEXTAUTH_URL: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
           NEXT_PUBLIC_LOGIN_URL: "https://slug-events-398513784123.us-west1.run.app/login"
           NEXT_PUBLIC_BACKEND_URL: "https://slug-events-398513784123.us-west1.run.app"
@@ -36,7 +32,6 @@ jobs:
           GOOGLE_CLIENT_ID: ${{ secrets.CLIENT_ID }}
           GOOGLE_CLIENT_SECRET: ${{ secrets.CLIENT_SECRET }}
 
-      # Step 3: Deploy to Firebase Hosting Preview Channel
       - uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}

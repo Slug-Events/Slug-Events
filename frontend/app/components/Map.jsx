@@ -825,10 +825,8 @@ export default function Map() {
           </div>
         </header>
       )}
-      {/* Mobile Menu Drawer */}
       {isMobileView && mobileMenuOpen && (
               <>
-                {/* Overlay */}
                 <div 
                   className="fixed inset-0 z-40 bg-black bg-opacity-50"
                   onClick={toggleMobileMenu}
@@ -964,7 +962,7 @@ export default function Map() {
                   setSelectedLocation(null);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Create New Event
                   </h3>
@@ -1104,7 +1102,7 @@ export default function Map() {
                   setShowEditForm(false);
                 }}
               >
-                <div className="bg-white rounded-lg min-w-[300px]">
+                <div className={`bg-white rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   <h3 className="font-bold text-lg border-b pb-2">
                     Edit Event
                   </h3>
@@ -1240,7 +1238,7 @@ export default function Map() {
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
                 onCloseClick={() => setSelectedEvent(null)}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   {selectedEvent.image && (
                     <div 
                       className="h-32 bg-cover bg-center mb-2"

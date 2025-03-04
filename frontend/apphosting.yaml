@@ -9,8 +9,6 @@ runConfig:
 
 # Environment variables and secrets.
 env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
   - variable: FIREBASE_CONFIG
     value: {"databaseURL":"","projectId":"slug-events-448506","storageBucket":"slug-events-448506.firebasestorage.app"}
     availability:
@@ -21,24 +19,6 @@ env:
     availability:
       - BUILD
       - RUNTIME
-  - variable: NEXTAUTH_URL
-    value: "slug-events-next-app--slug-events-448506.us-central1.hosted.app"
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_LOGIN_URL
-    value: "https://slug-events-398513784123.us-west1.run.app/login"
-    availability:
-      - BUILD
-      - RUNTIME
-  - variable: NEXT_PUBLIC_BACKEND_URL
-    value: "https://slug-events-398513784123.us-west1.run.app"
-    availability:
-      - BUILD
-      - RUNTIME
-
-  # Grant access to secrets in Cloud Secret Manager.
-  # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
   - variable: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
     secret: NEXT_PUBLIC_GOOGLE_MAPS_API_KEY@latest
   - variable: GOOGLE_CLIENT_ID

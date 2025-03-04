@@ -81,14 +81,6 @@ const RsvpPanel = ({
           </div>
         </div>
       </div>
-
-      {/* Backdrop for mobile - also adjusted to start below header */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 top-16 bg-black bg-opacity-25 md:hidden"
-          onClick={onClose}
-        />
-      )}
     </>
   );
 };

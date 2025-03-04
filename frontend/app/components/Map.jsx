@@ -124,9 +124,8 @@ export default function Map() {
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
   const mapRef = useRef(null);
+  
   const [isDarkMode, setIsDarkMode] = useState(false);
-
-  // changing the CSS theme
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
@@ -156,7 +155,33 @@ export default function Map() {
     localStorage.setItem("theme", newTheme);
     document.body.classList.toggle("dark", !isDarkMode);
   };
+  
+  // handling mobile view
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+  
+  // detects mobile screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    
+    // set initial value
+    handleResize();
+    
+    // add event listener
+    window.addEventListener('resize', handleResize);
+    
+    // cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
 
+  
   // removing an event from the Google Calendar
   const handleRemoveFromCalendar = async (eventId) => {
     try {
@@ -733,61 +758,181 @@ export default function Map() {
   return (
     // top of the site
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-4 px-6 flex justify-between items-center`}>
-        <div className="flex items-center space-x-6">
-          <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+      {/* Mobile Header */}
+      {isMobileView ? (
+        <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-3 px-4 flex justify-between items-center`}>
+          <h1 className={`text-xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
             <span className="text-blue-600">Slug Events</span>
           </h1>
-          <button
-            onClick={handleCreateButtonClick}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Create Event
-          </button>
-          <select
-            className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value === "") {
-                fetchEvents()
-              }else{
-                filterEvents(e.target.value)
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={toggleDarkMode}
+              className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-600 text-white'} p-2 rounded-lg hover:bg-gray-700 transition-colors text-sm`}
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+            <button
+              onClick={toggleMobileMenu}
+              className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-blue-600 text-white'} p-2 rounded-lg hover:bg-blue-700 transition-colors`}
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
+        </header>
+      ) : (
+        /* Desktop Header */
+        <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-4 px-6 flex justify-between items-center`}>
+          <div className="flex items-center space-x-6">
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+              <span className="text-blue-600">Slug Events</span>
+            </h1>
+            <button
+              onClick={handleCreateButtonClick}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Event
+            </button>
+            <select
+              className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value === "") {
+                  fetchEvents()
+                } else {
+                  filterEvents(e.target.value)
+                }
+              }}
+            >
+              <option value="">All Categories</option>
+              <option value="general">General</option>
+              <option value="sports">Sports</option>
+              <option value="ucsc-club">UCSC Club</option>
+              <option value="social">Social</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="datetime-local"
+              className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
+              defaultValue={getLocalDatetime()}
+              onChange={(e) =>
+                filterTimes(e.target.value)
               }
-            }}
-          >
-            <option value="">All Categories</option>
-            <option value="general">General</option>
-            <option value="sports">Sports</option>
-            <option value="ucsc-club">UCSC Club</option>
-            <option value="social">Social</option>
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="datetime-local"
-            className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
-            defaultValue={getLocalDatetime()}
-            onChange={(e) =>
-              filterTimes(e.target.value)
-            }
-          />
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggleDarkMode}
-            className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-600 text-white'} px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors`}
-          >
-            {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
-          </button>
-          <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Welcome, {user?.name}</span>
-          <button
-            onClick={handleSignOut}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Sign Out
-          </button>
-        </div>
-      </header>
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDarkMode}
+              className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-600 text-white'} px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors`}
+            >
+              {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            </button>
+            <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Welcome, {user?.name}</span>
+            <button
+              onClick={handleSignOut}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </header>
+      )}
+      {isMobileView && mobileMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40 bg-black bg-opacity-50"
+                  onClick={toggleMobileMenu}
+                />
+                <div 
+                  className={`
+                    fixed right-0 top-0 bottom-0 w-3/4 z-50 
+                    ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}
+                    shadow-lg transform transition-transform duration-300 ease-in-out
+                    translate-x-0
+                  `}
+                >
+                  <div className="flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700">
+                    <h2 className="text-lg font-bold flex-1 text-center">Menu</h2>
+                    <button
+                      onClick={toggleMobileMenu}
+                      className={`
+                        ${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-200 text-gray-800'} 
+                        p-1 rounded-lg
+                      `}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  
+                  <div className="p-2 space-y-3">
+                    <p className="text-xs mb-2 text-center">Welcome, {user?.name}</p>
+                    
+                    <button
+                      onClick={() => {
+                        handleCreateButtonClick();
+                        toggleMobileMenu();
+                      }}
+                      className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
+                    >
+                      Create Event
+                    </button>
+                    
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Filter by Category</label>
+                      <select
+                        className={`
+                          w-full p-1.5 border rounded text-xs
+                          ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}
+                        `}
+                        defaultValue=""
+                        onChange={(e) => {
+                          if (e.target.value === "") {
+                            fetchEvents();
+                          } else {
+                            filterEvents(e.target.value);
+                          }
+                          toggleMobileMenu();
+                        }}
+                      >
+                        <option value="">All Categories</option>
+                        <option value="general">General</option>
+                        <option value="sports">Sports</option>
+                        <option value="ucsc-club">UCSC Club</option>
+                        <option value="social">Social</option>
+                      </select>
+                    </div>
+                    
+                    <div className="space-y-1">
+                      <label className="text-xs font-medium">Filter by Date</label>
+                      <input
+                        type="datetime-local"
+                        className={`
+                          w-full p-1.5 border rounded text-xs
+                          ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}
+                        `}
+                        defaultValue={getLocalDatetime()}
+                        onChange={(e) => {
+                          filterTimes(e.target.value);
+                          toggleMobileMenu();
+                        }}
+                      />
+                    </div>
+                    
+                    <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
+                      <button
+                        onClick={() => {
+                          handleSignOut();
+                          toggleMobileMenu();
+                        }}
+                        className="w-full bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
+                      >
+                        Sign Out
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
 
       <div className="flex-1 relative">
         <LoadScript
@@ -830,7 +975,7 @@ export default function Map() {
                   setSelectedLocation(null);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}
+                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}
                 style={{
                   padding: '16px',
                   borderRadius: '12px'}}>
@@ -976,7 +1121,7 @@ export default function Map() {
                   setShowEditForm(false);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Edit Event
                   </h3>
@@ -1116,7 +1261,7 @@ export default function Map() {
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
                 onCloseClick={() => setSelectedEvent(null)}
               >
-                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg shadow-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   {selectedEvent.image && (
                     <div 
                       className="h-32 bg-cover bg-center mb-2"

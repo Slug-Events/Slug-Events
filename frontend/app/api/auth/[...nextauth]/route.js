@@ -12,6 +12,7 @@ export const authOptions = {
   pages: {
     signOut: "/",
   },
+  secret: process.env.NEXTAUTH_SECRET || "whatever",
   callbacks: {
     redirect({ url, baseUrl }) {
       return url.startsWith(baseUrl) ? url : baseUrl + "/map";

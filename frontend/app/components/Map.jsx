@@ -469,15 +469,6 @@ export default function Map() {
   };
 
   const handleEditEvent = async () => {
-    // if (!selectedLocation) {
-    //   alert("Please select a location on the map");
-    //   return;
-    // }
-
-    // if (!user?.email) {
-    //   alert("User email not found. Please sign in again.");
-    //   return;
-    // }
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/update_event`,
@@ -817,7 +808,10 @@ export default function Map() {
                   setSelectedLocation(null);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}
+                style={{
+                  padding: '16px', // Adjust padding as needed
+                  borderRadius: '12px'}}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Create New Event
                   </h3>
@@ -916,7 +910,10 @@ export default function Map() {
                   />
 
                   <div className="mb-2">
-                    <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="image-upload"
+                      className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
+                    >
                       Event Banner (Optional)
                     </label>
                     <input
@@ -957,8 +954,8 @@ export default function Map() {
                   setShowEditForm(false);
                 }}
               >
-                <div className="bg-white rounded-lg min-w-[300px]">
-                  <h3 className="font-bold text-lg border-b pb-2">
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}>
+                  <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Edit Event
                   </h3>
                   <Autocomplete
@@ -970,7 +967,7 @@ export default function Map() {
                     <input
                       type="text"
                       placeholder="Event Address"
-                      className="w-full p-2 border rounded mb-2"
+                      className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                       value={formData.address}
                       onChange={(e) =>
                         setFormData({ ...formData, address: e.target.value })
@@ -980,7 +977,7 @@ export default function Map() {
                   <input
                     type="text"
                     placeholder="Event Name"
-                    className="w-full p-2 border rounded mb-2"
+                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                     value={formData.title}
                     onChange={(e) =>
                       setFormData({ ...formData, title: e.target.value })
@@ -990,7 +987,7 @@ export default function Map() {
                     <input
                       type="number"
                       placeholder="Capacity (optional)"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                       value={formData.capacity}
                       onChange={(e) =>
                         setFormData({ ...formData, capacity: e.target.value })
@@ -999,7 +996,7 @@ export default function Map() {
                     <input
                       type="number"
                       placeholder="Age Limit (optional)"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                       value={formData.age_limit}
                       onChange={(e) =>
                         setFormData({ ...formData, age_limit: e.target.value })
@@ -1009,7 +1006,7 @@ export default function Map() {
                   <input
                     type="url"
                     placeholder="Registration URL (optional)"
-                    className="w-full p-2 border rounded mb-2"
+                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                     value={formData.registration}
                     onChange={(e) =>
                       setFormData({ ...formData, registration: e.target.value })
@@ -1018,7 +1015,7 @@ export default function Map() {
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="datetime-local"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
                       value={formData.startTime}
                       onChange={(e) =>
                         setFormData({ ...formData, startTime: e.target.value })
@@ -1026,7 +1023,7 @@ export default function Map() {
                     />
                     <input
                       type="datetime-local"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
                       value={formData.endTime}
                       onChange={(e) =>
                         setFormData({ ...formData, endTime: e.target.value })
@@ -1034,7 +1031,7 @@ export default function Map() {
                     />
                   </div>
                   <select
-                    className="w-full p-2 border rounded"
+                    className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
                     value={formData.category}
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
@@ -1047,7 +1044,7 @@ export default function Map() {
                   </select>
                   <textarea
                     placeholder="Event Description"
-                    className="w-full p-2 border rounded mb-2"
+                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                     value={formData.description}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
@@ -1055,7 +1052,10 @@ export default function Map() {
                   />
 
                   <div className="mb-2">
-                    <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label
+                    htmlFor="image-upload"
+                    className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
+                  >
                       Event Banner (Optional)
                     </label>
                     <input
@@ -1093,7 +1093,7 @@ export default function Map() {
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
                 onCloseClick={() => setSelectedEvent(null)}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg shadow-lg min-w-[300px]`}>
                   {selectedEvent.image && (
                     <div 
                       className="h-32 bg-cover bg-center mb-2"
@@ -1240,7 +1240,7 @@ export default function Map() {
                             {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
                           </button>
                         </div>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-500">
                           {rsvps[selectedEvent.eventId]?.length || 0} attending
                         </span>
                       </div>
@@ -1288,6 +1288,7 @@ export default function Map() {
               onClose={() => setShowRsvpList(false)}
               rsvps={rsvps[selectedEvent?.eventId] || []}
               eventTitle={selectedEvent?.title}
+              isDarkMode={isDarkMode}
             />
           </GoogleMap>
         </LoadScript>

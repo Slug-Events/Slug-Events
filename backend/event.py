@@ -1,5 +1,5 @@
 """
-Class for event object
+Class for Event object
 """
 from datetime import datetime
 from typing import Optional, Dict
@@ -9,7 +9,7 @@ from helpers import get_user_email, validate_event_data
 
 
 class Event:
-    """Class for event object"""
+    """Class for Event object"""
 
     def __init__(
         self,

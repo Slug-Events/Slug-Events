@@ -17,6 +17,7 @@ const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};
 
+// light/dark mode stuff
 const lightModeMap = [];
 const darkModeMap = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -100,6 +101,7 @@ const darkModeMap = [
 ];
 
 export default function Map() {
+  // relevant variables
   const [rsvps, setRsvps] = useState({});
   const [showRsvpList, setShowRsvpList] = useState(false);
   const router = useRouter();
@@ -117,8 +119,6 @@ export default function Map() {
     endTime: "",
     category: "",
     address: "",
-    capacity: "",
-    age_limit: "",
     image: ""
   });
   const autocompleteRef = useRef(null);
@@ -126,6 +126,7 @@ export default function Map() {
   const mapRef = useRef(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
 
+  // changing the CSS theme
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
@@ -139,6 +140,7 @@ export default function Map() {
     }
   }, []);
 
+  // handling dark mode
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.setOptions({
@@ -147,6 +149,7 @@ export default function Map() {
     }
   }, [isDarkMode]);
 
+  // turning dark mode on and off
   const toggleDarkMode = () => {
     const newTheme = !isDarkMode ? "dark" : "light";
     setIsDarkMode(!isDarkMode);
@@ -154,6 +157,7 @@ export default function Map() {
     document.body.classList.toggle("dark", !isDarkMode);
   };
 
+  // removing an event from the Google Calendar
   const handleRemoveFromCalendar = async (eventId) => {
     try {
       const response = await fetch(
@@ -174,21 +178,21 @@ export default function Map() {
   
       alert('Event removed from your Google Calendar!');
       
-      // Update local state to reflect the change immediately
+      // update local state to reflect the change immediately
       if (selectedEvent) {
         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
         
-        // Create a new calendar_events object without the user's entry
+        // create a new calendar_events object without the user's entry
         const updatedCalendarEvents = {...selectedEvent.calendar_events};
         delete updatedCalendarEvents[safeEmail];
         
-        // Update the selected event with new calendar_events
+        // update the selected event with new calendar_events
         setSelectedEvent({
           ...selectedEvent,
           calendar_events: updatedCalendarEvents
         });
         
-        // Also update the event in the markers array
+        // also update the event in the markers array
         setMarkers(markers.map(marker => 
           marker.eventId === eventId 
             ? {...marker, calendar_events: updatedCalendarEvents}
@@ -196,13 +200,14 @@ export default function Map() {
         ));
       }
       
-      // Optionally, still fetch events to ensure backend and frontend are in sync
+      // syncing events with frontend and backend
       fetchEvents();
     } catch (error) {
       alert(error.message);
     }
   };
 
+  // adding an event to Google Calendar
   const handleAddToCalendar = async (eventId) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/add_to_calendar/${eventId}`, {
@@ -225,19 +230,19 @@ export default function Map() {
       if (selectedEvent) {
         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
         
-        // Create a new calendar_events object with the user's new entry
+        // create a new calendar_events object with the user's new entry
         const updatedCalendarEvents = {
           ...selectedEvent.calendar_events,
           [safeEmail]: calendarEventId
         };
         
-        // Update the selected event with new calendar_events
+        // update the selected event with new calendar_events
         setSelectedEvent({
           ...selectedEvent,
           calendar_events: updatedCalendarEvents
         });
         
-        // Also update the event in the markers array
+        // also update the event in the markers array
         setMarkers(markers.map(marker => 
           marker.eventId === eventId 
             ? {...marker, calendar_events: updatedCalendarEvents}
@@ -255,6 +260,7 @@ export default function Map() {
     }
   };
 
+  // ensuring tokens aren't permanent.
   useEffect(() => {
     const handleToken = () => {
       const token = new URLSearchParams(window.location.search).get("token");
@@ -278,6 +284,7 @@ export default function Map() {
     fetchEvents();
   }, [router]);
 
+  // getting all events
   const fetchEvents = async () => {
     try {
       const response = await fetch(
@@ -290,8 +297,6 @@ export default function Map() {
           },
         }
       );
-
-
 
       if (!response.ok) throw new Error("Failed to fetch events");
 
@@ -322,6 +327,7 @@ export default function Map() {
     }
   };
 
+  // setting a user to RSVP
   const handleRsvp = async (eventId) => {
     try {
       const response = await fetch(
@@ -336,7 +342,7 @@ export default function Map() {
 
       if (!response.ok) throw new Error("Failed to RSVP");
 
-      // Update local RSVP state
+      // update local RSVP state
       setRsvps((prev) => ({
         ...prev,
         [eventId]: [...(prev[eventId] || []), user.email],
@@ -346,6 +352,7 @@ export default function Map() {
     }
   };
 
+  // removing a user from the RSVP list
   const handleUnrsvp = async (eventId) => {
     try {
       const response = await fetch(
@@ -364,7 +371,7 @@ export default function Map() {
 
       if (!response.ok) throw new Error("Failed to remove RSVP");
 
-      // Update local RSVP state
+      // update local RSVP state
       setRsvps((prev) => ({
         ...prev,
         [eventId]: prev[eventId].filter((email) => email !== user.email),
@@ -374,7 +381,7 @@ export default function Map() {
     }
   };
 
-  // Add this effect to fetch RSVPs when an event is selected
+  // fetches RSVPs when an event is selected
   useEffect(() => {
     const fetchRsvps = async () => {
       if (selectedEvent?.eventId) {
@@ -404,6 +411,7 @@ export default function Map() {
     fetchRsvps();
   }, [selectedEvent]);
 
+  // handles creating and event and sending to backend
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
       alert("Please select a location on the map");
@@ -446,6 +454,8 @@ export default function Map() {
         {
           lat: selectedLocation.lat,
           lng: selectedLocation.lng,
+          age_limit: "",
+          capacity: "",
           ...formData,
           host: user.email,
           eventId: response_data.eventId,
@@ -468,6 +478,7 @@ export default function Map() {
     }
   };
 
+  // handles editing an event and sending it to the backend
   const handleEditEvent = async () => {
     try {
       const response = await fetch(
@@ -524,6 +535,7 @@ export default function Map() {
     }
   };
 
+  // handles deleting an event and removing it from the backend
   const handleDeleteEvent = async () => {
     if (!selectedEvent) {
       alert("Please select an event on the map");
@@ -559,6 +571,7 @@ export default function Map() {
     }
   }
 
+  // handles what filter to apply to events
   const filterEvents = async (option) => {
     try {
       const response = await fetch(
@@ -600,6 +613,7 @@ export default function Map() {
     }
   }
 
+  // handles filtering events by time
   const filterTimes = async (time) => {
     try {
       const response = await fetch(
@@ -641,11 +655,13 @@ export default function Map() {
     }
   }
 
+  // signs user out and removes token
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
   };
 
+  // sets the current location to where clicked
   const handleMapClick = async (e) => {
     if (!showCreateForm) return;
 
@@ -654,6 +670,7 @@ export default function Map() {
     updateFormLocation(lat, lng);
   };
 
+  // updates current location
   const updateFormLocation = (lat, lng) => {
     setSelectedLocation({ lat, lng });
 
@@ -682,6 +699,7 @@ export default function Map() {
     }
   };
 
+  // allows for clicking around the map to select a location
   const handlePlaceSelect = () => {
     if (autocompleteRef.current) {
       const place = autocompleteRef.current.getPlace();
@@ -694,13 +712,15 @@ export default function Map() {
     }
   };
 
+  // retrieving the date/time
   function getLocalDatetime() {
     const now = new Date();
-    // Adjust to local timezone by subtracting the offset
+    // adjust to local timezone by subtracting the offset
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
   }
 
+  // encoding uploaded image to bits
   function encodeImageToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -711,6 +731,7 @@ export default function Map() {
   }
   
   return (
+    // top of the site
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
       <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-4 px-6 flex justify-between items-center`}>
         <div className="flex items-center space-x-6">
@@ -800,6 +821,7 @@ export default function Map() {
                 onClick={() => setSelectedEvent(marker)}
               />
             ))}
+            {/* Create Event Popup */}
             {showCreateForm && selectedLocation && (
               <InfoWindow
                 position={selectedLocation}
@@ -810,7 +832,7 @@ export default function Map() {
               >
                 <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}
                 style={{
-                  padding: '16px', // Adjust padding as needed
+                  padding: '16px',
                   borderRadius: '12px'}}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Create New Event
@@ -929,7 +951,7 @@ export default function Map() {
                           }
                           else {
                             const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                            console.log("Uploaded image in base64: ", image_base64String);
+                            // console.log("Uploaded image in base64: ", image_base64String);
                             setFormData({ ...formData, image: image_base64String });
                           }
                         }
@@ -946,7 +968,7 @@ export default function Map() {
                 </div>
               </InfoWindow>
             )}
-            
+            {/* Editing Event Popup */}
             {showEditForm && (
               <InfoWindow
                 position={selectedLocation}
@@ -1071,7 +1093,7 @@ export default function Map() {
                           }
                           else {
                             const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                            console.log("Uploaded image in base64: ", image_base64String);
+                            // console.log("Uploaded image in base64: ", image_base64String);
                             setFormData({ ...formData, image: image_base64String });
                           }
                         }
@@ -1088,6 +1110,7 @@ export default function Map() {
                 </div>
               </InfoWindow>
             )}
+            {/* Selected Event Popup */}
             {selectedEvent && (
               <InfoWindow
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
@@ -1185,7 +1208,7 @@ export default function Map() {
                     {/* Calendar Controls Section */}
                     <div className="mt-2 pt-2 border-t">
                       {(() => {
-                        // Check if this event is in the user's calendar
+                        // check if this event is in the user's calendar
                         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
                         const isInCalendar = selectedEvent?.calendar_events && 
                                             selectedEvent?.calendar_events[safeEmail];
@@ -1256,7 +1279,7 @@ export default function Map() {
                               description: selectedEvent.description,
                               startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
                               endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
-                              capacity: selectedEvent.capacity || "None",
+                              capacity: selectedEvent.capacity || "Unlimited",
                               age_limit: selectedEvent.age_limit || "None",
                               image: selectedEvent.image,
                               registration: selectedEvent.registration,

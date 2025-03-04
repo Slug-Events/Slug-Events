@@ -117,10 +117,21 @@ export default function Map() {
     description: "",
     startTime: "",
     endTime: "",
-    category: "",
+    category: "general",
     address: "",
+    age_limit: "",
+    capacity: "",
     image: ""
   });
+  const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
+  const areRequiredFieldsFilled = () => {
+    return requiredFields.every(field => formData[field] && formData[field].trim() !== '');
+  };  
+  const [isFormValid, setIsFormValid] = useState(false);
+  useEffect(() => {
+    setIsFormValid(areRequiredFieldsFilled());
+  }, [formData]);
+
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
   const mapRef = useRef(null);
@@ -335,7 +346,7 @@ export default function Map() {
             description: event.description,
             startTime: event.startTime,
             endTime: event.endTime,
-            category : event.category,
+            category: event.category,
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
@@ -479,8 +490,6 @@ export default function Map() {
         {
           lat: selectedLocation.lat,
           lng: selectedLocation.lng,
-          age_limit: "",
-          capacity: "",
           ...formData,
           host: user.email,
           eventId: response_data.eventId,
@@ -975,10 +984,7 @@ export default function Map() {
                   setSelectedLocation(null);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}
-                style={{
-                  padding: '16px',
-                  borderRadius: '12px'}}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Create New Event
                   </h3>
@@ -1027,15 +1033,6 @@ export default function Map() {
                       }
                     />
                   </div>
-                  <input
-                    type="url"
-                    placeholder="Registration URL (optional)"
-                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
-                    value={formData.registration}
-                    onChange={(e) =>
-                      setFormData({ ...formData, registration: e.target.value })
-                    }
-                  />
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="datetime-local"
@@ -1061,7 +1058,6 @@ export default function Map() {
                       setFormData({ ...formData, category: e.target.value })
                     }
                   >
-                    <option value="">All Categories</option>
                     <option value="general">General</option>
                     <option value="sports">Sports</option>
                     <option value="ucsc-club">UCSC Club</option>
@@ -1103,10 +1099,14 @@ export default function Map() {
                       }
                     />
                   </div>
-
                   <button
                     onClick={handleCreateEvent}
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                    className={`w-full py-2 rounded mt-2 ${
+                      isFormValid
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    }`}
+                    disabled={!isFormValid}
                   >
                     Create Event
                   </button>
@@ -1170,15 +1170,6 @@ export default function Map() {
                       }
                     />
                   </div>
-                  <input
-                    type="url"
-                    placeholder="Registration URL (optional)"
-                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
-                    value={formData.registration}
-                    onChange={(e) =>
-                      setFormData({ ...formData, registration: e.target.value })
-                    }
-                  />
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="datetime-local"
@@ -1248,7 +1239,12 @@ export default function Map() {
 
                   <button
                     onClick={handleEditEvent}
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                    className={`w-full py-2 rounded mt-2 ${
+                      isFormValid
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                    }`}
+                    disabled={!isFormValid}
                   >
                     Edit Event
                   </button>
@@ -1261,7 +1257,7 @@ export default function Map() {
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
                 onCloseClick={() => setSelectedEvent(null)}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg shadow-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   {selectedEvent.image && (
                     <div 
                       className="h-32 bg-cover bg-center mb-2"
@@ -1326,21 +1322,6 @@ export default function Map() {
                         {selectedEvent.age_limit || "None"}
                       </span>
                     </div>
-                    {selectedEvent.registration && (
-                      <div className="flex items-center">
-                        <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
-                          Registration:
-                        </span>
-                        <a
-                          href={selectedEvent.registration}
-                          className="text-xs text-blue-600 hover:underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Link
-                        </a>
-                      </div>
-                    )}
                     <div className="flex items-center">
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
                         Category:
@@ -1427,7 +1408,6 @@ export default function Map() {
                               capacity: selectedEvent.capacity || "Unlimited",
                               age_limit: selectedEvent.age_limit || "None",
                               image: selectedEvent.image,
-                              registration: selectedEvent.registration,
                               category: selectedEvent.category,
                               address: selectedEvent.address,
                             });

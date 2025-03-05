@@ -962,18 +962,17 @@ export default function Map() {
             >
             {markers.map((marker, index) => (
               <Marker
-                key={index}
+                key={`marker-${marker.eventId || index}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 onClick={() => {
                   setShowCreateForm(false);
                   setShowEditForm(false);
                   setShowRsvpList(false);
                   
-                  setSelectedEvent(null);
-                  
-                  setTimeout(() => {
-                    setSelectedEvent(marker);
-                  }, 10);
+                  setSelectedEvent(() => null);
+                  requestAnimationFrame(() => {
+                    setSelectedEvent(() => marker);
+                  });
                 }}
               />
             ))}

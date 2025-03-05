@@ -1,28 +1,28 @@
-name: EsLint
+name: Eslint
 
 on:
   push:
     paths:
-      - 'frontend/**'
+      - 'frontend/**/*.{js,jsx,ts,tsx}'
   pull_request:
     paths:
-      - 'frontend/**'
+      - 'frontend/**/*.{js,jsx,ts,tsx}'
 
 jobs:
   eslint:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
+    - uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
+    - uses: actions/setup-node@v3
+      with:
+        node-version: '16'
 
-      - name: Install dependencies
-        working-directory: ./frontend
-        run: npm ci
+    - name: Install dependencies
+      working-directory: frontend
+      run: npm install
 
-      - name: Run ESLint
-        working-directory: ./frontend
-        run: npx eslint . --ext .js,.jsx,.ts,.tsx
+    - name: Run ESLint
+      working-directory: frontend
+      run: npm run eslint

@@ -1370,19 +1370,19 @@ export default function Map() {
 
                     {/* RSVP Section */}
                     <div className="mt-4 space-y-2 border-t pt-4">
-                      <div className="flex justify-between items-center">
-                        <div className="space-x-2">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex justify-between items-center">
                           {rsvps[selectedEvent.eventId]?.includes(user?.email) ? (
                             <button
                               onClick={() => handleUnrsvp(selectedEvent.eventId)}
-                              className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                              className="flex-1 mr-2 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
                             >
                               Un-RSVP
                             </button>
                           ) : (
                             <button
                               onClick={() => handleRsvp(selectedEvent.eventId)}
-                              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
+                              className="flex-1 mr-2 bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
                             >
                               RSVP
                             </button>
@@ -1391,14 +1391,16 @@ export default function Map() {
                             onClick={() => {
                               setShowRsvpList(!showRsvpList);
                             }}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
+                            className="flex-1 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
                           >
                             {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
                           </button>
                         </div>
-                        <span className="text-sm text-gray-500">
-                          {rsvps[selectedEvent.eventId]?.length || 0} attending
-                        </span>
+                        <div className="text-center">
+                          <span className="text-sm text-gray-500">
+                            {rsvps[selectedEvent.eventId]?.length || 0} attending
+                          </span>
+                        </div>
                       </div>
                     </div>
 

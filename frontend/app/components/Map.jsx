@@ -299,7 +299,7 @@ export default function Map() {
 
       try {
         setUser(jwtDecode(storedToken).user);
-      } catch (error) {
+      } catch {
         localStorage.removeItem("token");
         router.push("/");
       }
@@ -1400,7 +1400,7 @@ export default function Map() {
                             </button>
                           )}
                           <button
-                            onClick={(e) => {
+                            onClick={() => {
                               setShowRsvpList(!showRsvpList);
                             }}
                             className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"

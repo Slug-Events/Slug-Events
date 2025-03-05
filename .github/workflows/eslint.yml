@@ -1,4 +1,4 @@
-name: EsLint
+name: Eslint
 
 on:
   push:

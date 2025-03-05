@@ -6,8 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "eslint:github-action": "eslint src/"
+    "lint": "next lint"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",

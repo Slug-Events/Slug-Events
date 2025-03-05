@@ -9,7 +9,7 @@ on:
       - 'frontend/**/*.{js,jsx,ts,tsx}'
 
 jobs:
-  lint:
+  eslint:
     runs-on: ubuntu-latest
 
     steps:

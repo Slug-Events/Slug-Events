@@ -22,8 +22,8 @@ class Event:
         owner_email: str,
         db,
         address: str="",
-        capacity: Optional[int] = None,
-        age_limit: Optional[int] = None,
+        capacity: Optional[str] = None,
+        age_limit: Optional[str] = None,
         image: Optional[str] = None,
         event_id: Optional[str] = None,
     ) -> None:
@@ -89,7 +89,7 @@ class Event:
             },
             category=event_data.get("category"),
             capacity=event_data.get("capacity"),
-            age_limit=int(event_data.get("age_limit")),
+            age_limit=event_data.get("age_limit"),
             image=event_data.get("image"),
             owner_email=user_email,
             db = db

@@ -12,7 +12,7 @@ import {
   Autocomplete,
 } from "@react-google-maps/api";
 
-const libraries = 
+const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};

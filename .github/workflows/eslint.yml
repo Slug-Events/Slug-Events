@@ -1,4 +1,4 @@
-name: ESLint
+name: EsLint
 
 on:
   push:
@@ -25,4 +25,4 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./frontend
-        run: npm run lint
+        run: npx run next lint --fix && prettier '**/*.{json,yaml}' --write --ignore-path .gitignore

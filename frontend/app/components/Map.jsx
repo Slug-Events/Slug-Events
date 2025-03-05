@@ -158,6 +158,7 @@ export default function Map() {
       });
     }
   }, [isDarkMode]);
+  
 
   // turning dark mode on and off
   const toggleDarkMode = () => {
@@ -949,30 +950,39 @@ export default function Map() {
           libraries={libraries}
           onLoad={() => (geocoder.current = new window.google.maps.Geocoder())}
         >
-          <GoogleMap
-            mapContainerStyle={mapContainerStyle}
-            center={center}
-            zoom={13}
-            onClick={handleMapClick}
-            onLoad={(map) => {
-              mapRef.current = map;
-              if (isDarkMode) {
-                map.setOptions({ styles: darkModeMap });
-              }
-            }}
-            options={{
-              restriction: {
-                latLngBounds: bounds,
-                strictBounds: true,
-              },
-              styles: isDarkMode ? darkModeMap : lightModeMap,
-            }}
-          >
+            <GoogleMap
+              mapContainerStyle={mapContainerStyle}
+              center={center}
+              zoom={13}
+              onClick={handleMapClick}
+              onLoad={(map) => {
+                mapRef.current = map;
+                if (isDarkMode) {
+                  map.setOptions({ styles: darkModeMap });
+                }
+              }}
+              options={{
+                restriction: {
+                  latLngBounds: bounds,
+                  strictBounds: true,
+                },
+                styles: isDarkMode ? darkModeMap : lightModeMap,
+              }}
+            >
             {markers.map((marker, index) => (
               <Marker
-                key={index}
+                key={`marker-${marker.eventId || index}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
-                onClick={() => setSelectedEvent(marker)}
+                onClick={() => {
+                  setShowCreateForm(false);
+                  setShowEditForm(false);
+                  setShowRsvpList(false);
+                  
+                  setSelectedEvent(() => null);
+                  requestAnimationFrame(() => {
+                    setSelectedEvent(() => marker);
+                  });
+                }}
               />
             ))}
             {/* Create Event Popup */}

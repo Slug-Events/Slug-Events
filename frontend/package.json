@@ -6,7 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint --fix && prettier '**/*.{json,yaml}' --write --ignore-path .gitignore"
   },
   "dependencies": {
     "@react-google-maps/api": "^2.20.5",

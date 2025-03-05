@@ -18,4 +18,7 @@ export default [
           "**/*.jsx",
       ]
   },
+  ...compat.config({
+    extends: ['eslint:recommended', 'next'],
+  }),
 ];

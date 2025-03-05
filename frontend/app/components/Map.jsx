@@ -15,7 +15,7 @@ import {
 const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
-const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};
+const bounds = { north: 37.1, south: 36.8, east: -121.82, west: -122.16 };
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -126,7 +126,7 @@ export default function Map() {
   const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
   const areRequiredFieldsFilled = () => {
     return requiredFields.every(field => formData[field] && formData[field].trim() !== '');
-  };  
+  };
   const [isFormValid, setIsFormValid] = useState(false);
   useEffect(() => {
     setIsFormValid(areRequiredFieldsFilled());
@@ -135,7 +135,7 @@ export default function Map() {
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
   const mapRef = useRef(null);
-  
+
   const [isDarkMode, setIsDarkMode] = useState(false);
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -158,7 +158,7 @@ export default function Map() {
       });
     }
   }, [isDarkMode]);
-  
+
 
   // turning dark mode on and off
   const toggleDarkMode = () => {
@@ -167,33 +167,33 @@ export default function Map() {
     localStorage.setItem("theme", newTheme);
     document.body.classList.toggle("dark", !isDarkMode);
   };
-  
+
   // handling mobile view
   const [isMobileView, setIsMobileView] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
   };
-  
+
   // detects mobile screen size
   useEffect(() => {
     const handleResize = () => {
       setIsMobileView(window.innerWidth < 768);
     };
-    
+
     // set initial value
     handleResize();
-    
+
     // add event listener
     window.addEventListener('resize', handleResize);
-    
+
     // cleanup
     return () => {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
 
-  
+
   // removing an event from the Google Calendar
   const handleRemoveFromCalendar = async (eventId) => {
     try {
@@ -207,36 +207,36 @@ export default function Map() {
           }
         }
       );
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to remove from calendar');
       }
-  
+
       alert('Event removed from your Google Calendar!');
-      
+
       // update local state to reflect the change immediately
       if (selectedEvent) {
         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
-        
+
         // create a new calendar_events object without the user's entry
-        const updatedCalendarEvents = {...selectedEvent.calendar_events};
+        const updatedCalendarEvents = { ...selectedEvent.calendar_events };
         delete updatedCalendarEvents[safeEmail];
-        
+
         // update the selected event with new calendar_events
         setSelectedEvent({
           ...selectedEvent,
           calendar_events: updatedCalendarEvents
         });
-        
+
         // also update the event in the markers array
-        setMarkers(markers.map(marker => 
-          marker.eventId === eventId 
-            ? {...marker, calendar_events: updatedCalendarEvents}
+        setMarkers(markers.map(marker =>
+          marker.eventId === eventId
+            ? { ...marker, calendar_events: updatedCalendarEvents }
             : marker
         ));
       }
-      
+
       // syncing events with frontend and backend
       fetchEvents();
     } catch (error) {
@@ -254,39 +254,39 @@ export default function Map() {
           'Content-Type': 'application/json'
         }
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to add to calendar');
       }
-  
+
       const data = await response.json();
       const calendarEventId = data.calendarEventId;
-      
+
       alert('Event added to your Google Calendar!');
-      
+
       if (selectedEvent) {
         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
-        
+
         // create a new calendar_events object with the user's new entry
         const updatedCalendarEvents = {
           ...selectedEvent.calendar_events,
           [safeEmail]: calendarEventId
         };
-        
+
         // update the selected event with new calendar_events
         setSelectedEvent({
           ...selectedEvent,
           calendar_events: updatedCalendarEvents
         });
-        
+
         // also update the event in the markers array
-        setMarkers(markers.map(marker => 
-          marker.eventId === eventId 
-            ? {...marker, calendar_events: updatedCalendarEvents}
+        setMarkers(markers.map(marker =>
+          marker.eventId === eventId
+            ? { ...marker, calendar_events: updatedCalendarEvents }
             : marker
         ));
       }
-      
+
       fetchEvents();
     } catch (error) {
       if (error.message.includes('not authorized')) {
@@ -764,7 +764,7 @@ export default function Map() {
       reader.onerror = error => reject(error);
     });
   }
-  
+
   return (
     // top of the site
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
@@ -848,101 +848,101 @@ export default function Map() {
         </header>
       )}
       {isMobileView && mobileMenuOpen && (
-              <>
-                <div 
-                  className="fixed inset-0 z-40 bg-black bg-opacity-50"
-                  onClick={toggleMobileMenu}
-                />
-                <div 
-                  className={`
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black bg-opacity-50"
+            onClick={toggleMobileMenu}
+          />
+          <div
+            className={`
                     fixed right-0 top-0 bottom-0 w-3/4 z-50 
                     ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}
                     shadow-lg transform transition-transform duration-300 ease-in-out
                     translate-x-0
                   `}
-                >
-                  <div className="flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700">
-                    <h2 className="text-lg font-bold flex-1 text-center">Menu</h2>
-                    <button
-                      onClick={toggleMobileMenu}
-                      className={`
+          >
+            <div className="flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold flex-1 text-center">Menu</h2>
+              <button
+                onClick={toggleMobileMenu}
+                className={`
                         ${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-200 text-gray-800'} 
                         p-1 rounded-lg
                       `}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  
-                  <div className="p-2 space-y-3">
-                    <p className="text-xs mb-2 text-center">Welcome, {user?.name}</p>
-                    
-                    <button
-                      onClick={() => {
-                        handleCreateButtonClick();
-                        toggleMobileMenu();
-                      }}
-                      className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
-                    >
-                      Create Event
-                    </button>
-                    
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium">Filter by Category</label>
-                      <select
-                        className={`
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-2 space-y-3">
+              <p className="text-xs mb-2 text-center">Welcome, {user?.name}</p>
+
+              <button
+                onClick={() => {
+                  handleCreateButtonClick();
+                  toggleMobileMenu();
+                }}
+                className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                Create Event
+              </button>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Filter by Category</label>
+                <select
+                  className={`
                           w-full p-1.5 border rounded text-xs
                           ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}
                         `}
-                        defaultValue=""
-                        onChange={(e) => {
-                          if (e.target.value === "") {
-                            fetchEvents();
-                          } else {
-                            filterEvents(e.target.value);
-                          }
-                          toggleMobileMenu();
-                        }}
-                      >
-                        <option value="">All Categories</option>
-                        <option value="general">General</option>
-                        <option value="sports">Sports</option>
-                        <option value="ucsc-club">UCSC Club</option>
-                        <option value="social">Social</option>
-                      </select>
-                    </div>
-                    
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium">Filter by Date</label>
-                      <input
-                        type="datetime-local"
-                        className={`
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value === "") {
+                      fetchEvents();
+                    } else {
+                      filterEvents(e.target.value);
+                    }
+                    toggleMobileMenu();
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  <option value="general">General</option>
+                  <option value="sports">Sports</option>
+                  <option value="ucsc-club">UCSC Club</option>
+                  <option value="social">Social</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Filter by Date</label>
+                <input
+                  type="datetime-local"
+                  className={`
                           w-full p-1.5 border rounded text-xs
                           ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}
                         `}
-                        defaultValue={getLocalDatetime()}
-                        onChange={(e) => {
-                          filterTimes(e.target.value);
-                          toggleMobileMenu();
-                        }}
-                      />
-                    </div>
-                    
-                    <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
-                      <button
-                        onClick={() => {
-                          handleSignOut();
-                          toggleMobileMenu();
-                        }}
-                        className="w-full bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
-                      >
-                        Sign Out
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </>
-            )}
+                  defaultValue={getLocalDatetime()}
+                  onChange={(e) => {
+                    filterTimes(e.target.value);
+                    toggleMobileMenu();
+                  }}
+                />
+              </div>
+
+              <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    toggleMobileMenu();
+                  }}
+                  className="w-full bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex-1 relative">
         <LoadScript
@@ -950,25 +950,25 @@ export default function Map() {
           libraries={libraries}
           onLoad={() => (geocoder.current = new window.google.maps.Geocoder())}
         >
-            <GoogleMap
-              mapContainerStyle={mapContainerStyle}
-              center={center}
-              zoom={13}
-              onClick={handleMapClick}
-              onLoad={(map) => {
-                mapRef.current = map;
-                if (isDarkMode) {
-                  map.setOptions({ styles: darkModeMap });
-                }
-              }}
-              options={{
-                restriction: {
-                  latLngBounds: bounds,
-                  strictBounds: true,
-                },
-                styles: isDarkMode ? darkModeMap : lightModeMap,
-              }}
-            >
+          <GoogleMap
+            mapContainerStyle={mapContainerStyle}
+            center={center}
+            zoom={13}
+            onClick={handleMapClick}
+            onLoad={(map) => {
+              mapRef.current = map;
+              if (isDarkMode) {
+                map.setOptions({ styles: darkModeMap });
+              }
+            }}
+            options={{
+              restriction: {
+                latLngBounds: bounds,
+                strictBounds: true,
+              },
+              styles: isDarkMode ? darkModeMap : lightModeMap,
+            }}
+          >
             {markers.map((marker, index) => (
               <Marker
                 key={`marker-${marker.eventId || index}`}
@@ -977,7 +977,7 @@ export default function Map() {
                   setShowCreateForm(false);
                   setShowEditForm(false);
                   setShowRsvpList(false);
-                  
+
                   setSelectedEvent(() => null);
                   requestAnimationFrame(() => {
                     setSelectedEvent(() => marker);
@@ -1094,28 +1094,26 @@ export default function Map() {
                       id="image-upload"
                       accept="image/*"
                       className="w-full p-2 border rounded"
-                      onChange={async (e) =>
-                        {
-                          if(e.target.files[0].size > 286720) {
-                            alert("File is too big! Please ensure it is less than 280KB.");
-                            e.target.value = "";
-                          }
-                          else {
-                            const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                            // console.log("Uploaded image in base64: ", image_base64String);
-                            setFormData({ ...formData, image: image_base64String });
-                          }
+                      onChange={async (e) => {
+                        if (e.target.files[0].size > 286720) {
+                          alert("File is too big! Please ensure it is less than 280KB.");
+                          e.target.value = "";
                         }
+                        else {
+                          const image_base64String = await encodeImageToBase64(e.target.files[0]);
+                          // console.log("Uploaded image in base64: ", image_base64String);
+                          setFormData({ ...formData, image: image_base64String });
+                        }
+                      }
                       }
                     />
                   </div>
                   <button
                     onClick={handleCreateEvent}
-                    className={`w-full py-2 rounded mt-2 ${
-                      isFormValid
+                    className={`w-full py-2 rounded mt-2 ${isFormValid
                         ? 'bg-green-600 text-white hover:bg-green-700'
                         : 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                    }`}
+                      }`}
                     disabled={!isFormValid}
                   >
                     Create Event
@@ -1220,10 +1218,10 @@ export default function Map() {
                   />
 
                   <div className="mb-2">
-                  <label
-                    htmlFor="image-upload"
-                    className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
-                  >
+                    <label
+                      htmlFor="image-upload"
+                      className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
+                    >
                       Event Banner (Optional)
                     </label>
                     <input
@@ -1231,29 +1229,27 @@ export default function Map() {
                       id="image-upload"
                       accept="image/*"
                       className="w-full p-2 border rounded"
-                      onChange={async (e) =>
-                        {
-                          if(e.target.files[0].size > 286720) {
-                            alert("File is too big! Please ensure it is less than 280KB.");
-                            e.target.value = "";
-                          }
-                          else {
-                            const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                            // console.log("Uploaded image in base64: ", image_base64String);
-                            setFormData({ ...formData, image: image_base64String });
-                          }
+                      onChange={async (e) => {
+                        if (e.target.files[0].size > 286720) {
+                          alert("File is too big! Please ensure it is less than 280KB.");
+                          e.target.value = "";
                         }
+                        else {
+                          const image_base64String = await encodeImageToBase64(e.target.files[0]);
+                          // console.log("Uploaded image in base64: ", image_base64String);
+                          setFormData({ ...formData, image: image_base64String });
+                        }
+                      }
                       }
                     />
                   </div>
 
                   <button
                     onClick={handleEditEvent}
-                    className={`w-full py-2 rounded mt-2 ${
-                      isFormValid
+                    className={`w-full py-2 rounded mt-2 ${isFormValid
                         ? 'bg-green-600 text-white hover:bg-green-700'
                         : 'bg-gray-400 text-gray-700 cursor-not-allowed'
-                    }`}
+                      }`}
                     disabled={!isFormValid}
                   >
                     Edit Event
@@ -1269,10 +1265,11 @@ export default function Map() {
               >
                 <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg shadow-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   {selectedEvent.image && (
-                    <div 
+                    <div
                       className="h-32 bg-cover bg-center mb-2"
                       style={{
-                      backgroundImage: `url(${selectedEvent.image})`}}
+                        backgroundImage: `url(${selectedEvent.image})`
+                      }}
                     ></div>
                   )}
                   <div className="flex justify-between items-start mb-2">
@@ -1340,15 +1337,15 @@ export default function Map() {
                         {selectedEvent.category}
                       </span>
                     </div>
-                    
+
                     {/* Calendar Controls Section */}
                     <div className="mt-2 pt-2 border-t">
                       {(() => {
                         // check if this event is in the user's calendar
                         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
-                        const isInCalendar = selectedEvent?.calendar_events && 
-                                            selectedEvent?.calendar_events[safeEmail];
-                        
+                        const isInCalendar = selectedEvent?.calendar_events &&
+                          selectedEvent?.calendar_events[safeEmail];
+
                         return (
                           <div className="flex justify-between items-center">
                             {isInCalendar ? (
@@ -1370,7 +1367,7 @@ export default function Map() {
                         );
                       })()}
                     </div>
-                    
+
                     {/* RSVP Section */}
                     <div className="mt-4 space-y-2 border-t pt-4">
                       <div className="flex justify-between items-center">
@@ -1404,7 +1401,7 @@ export default function Map() {
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Event Owner Actions */}
                     {selectedEvent.host === user?.email && (
                       <div className="flex flex-col space-y-2 mt-4 pt-4 border-t">
@@ -1430,7 +1427,7 @@ export default function Map() {
                           Edit Event
                         </button>
                         <button
-                          onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
+                          onClick={() => { handleDeleteEvent(); setSelectedEvent(null); }}
                           className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
                         >
                           Delete Event

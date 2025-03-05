@@ -25,4 +25,4 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./frontend
-        run: npx run next lint --fix && prettier '**/*.{json,yaml}' --write --ignore-path .gitignore
+        run: npm run lint -- --no-cache

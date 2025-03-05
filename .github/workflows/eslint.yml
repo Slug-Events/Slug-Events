@@ -25,4 +25,4 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./frontend
-        run: lint
+        run: npm run lint

@@ -25,4 +25,4 @@ jobs:
 
       - name: Run ESLint
         working-directory: ./frontend
-        run: npx eslint . --ext .js,.jsx,.ts,.tsx
+        run: lint

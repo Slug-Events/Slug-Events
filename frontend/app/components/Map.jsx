@@ -1111,8 +1111,8 @@ export default function Map() {
                   <button
                     onClick={handleCreateEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-400 text-gray-700 cursor-not-allowed'
                       }`}
                     disabled={!isFormValid}
                   >
@@ -1247,8 +1247,8 @@ export default function Map() {
                   <button
                     onClick={handleEditEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-400 text-gray-700 cursor-not-allowed'
                       }`}
                     disabled={!isFormValid}
                   >
@@ -1285,9 +1285,14 @@ export default function Map() {
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
                         Address:
                       </span>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} flex-1`}>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-xs ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} flex-1 underline cursor-pointer`}
+                      >
                         {selectedEvent.address}
-                      </span>
+                      </a>
                     </div>
                     <div className="flex items-center">
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>

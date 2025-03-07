@@ -15,7 +15,7 @@ import {
 const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
-const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};
+const bounds = {north: 37.19, south: 36.78, east: -121.63, west: -122.46};
 
 const lightModeMap = [];
 const darkModeMap = [
@@ -98,6 +98,11 @@ const darkModeMap = [
     stylers: [{ color: "#17263c" }],
   },
 ];
+
+const generateShareableLink = (eventId) => {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/event/${eventId}`;
+};
 
 export default function Map() {
   const [rsvps, setRsvps] = useState({});
@@ -655,13 +660,25 @@ export default function Map() {
     router.push("/");
   };
 
-  const handleMapClick = async (e) => {
-    if (!showCreateForm) return;
+const handleMapClick = async (e) => {
+  if (!showCreateForm) return;
 
-    const lat = e.latLng.lat();
-    const lng = e.latLng.lng();
-    updateFormLocation(lat, lng);
-  };
+  let adjustedLat = e.latLng.lat();
+  let adjustedLng = e.latLng.lng();
+  const buffer = 0.07;
+
+  if (adjustedLat >= bounds.north - buffer) adjustedLat -= buffer;
+  else if (adjustedLat <= bounds.south + buffer) adjustedLat += buffer;
+
+  if (adjustedLng >= bounds.east - buffer) adjustedLng -= buffer;
+  else if (adjustedLng <= bounds.west + buffer) adjustedLng += buffer;
+
+  updateFormLocation(adjustedLat, adjustedLng);
+
+  if (mapRef.current) {
+    mapRef.current.panTo({ lat: adjustedLat, lng: adjustedLng });
+  }
+};
 
   const updateFormLocation = (lat, lng) => {
     setSelectedLocation({ lat, lng });
@@ -806,7 +823,37 @@ export default function Map() {
               <Marker
                 key={index}
                 position={{ lat: marker.lat, lng: marker.lng }}
-                onClick={() => setSelectedEvent(marker)}
+                onClick={() => {
+                  setSelectedEvent(marker)
+                  if (mapRef.current) {
+                    const map = mapRef.current;
+                    const mapBounds = map.getBounds();
+            
+                    if (mapBounds) {
+                      const buffer = 0.07; // Moves the map slightly inward
+                      
+                      let newLat = marker.lat;
+                      let newLng = marker.lng;
+            
+                      // Check if the marker is too close to any boundary and adjust
+                      if (marker.lat >= bounds.north - buffer) {
+                        newLat -= buffer;
+                      }
+                      if (marker.lat <= bounds.south + buffer) {
+                        newLat += buffer;
+                      }
+                      if (marker.lng >= bounds.east - buffer) {
+                        newLng -= buffer;
+                      }
+                      if (marker.lng <= bounds.west + buffer) {
+                        newLng += buffer;
+                      }
+            
+                      // Move the map to the adjusted position
+                      map.panTo({ lat: newLat, lng: newLng });
+                    }
+                  }
+                }}
               />
             ))}
             {showCreateForm && selectedLocation && (
@@ -1207,6 +1254,16 @@ export default function Map() {
                                 Add to Calendar
                               </button>
                             )}
+                            <button
+                              onClick={() => {
+                                const shareableLink = generateShareableLink(selectedEvent.eventId);
+                                navigator.clipboard.writeText(shareableLink);
+                                alert("Event link copied to clipboard!");
+                              }}
+                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
+                            >
+                              Share Event
+                            </button>
                           </div>
                         );
                       })()}

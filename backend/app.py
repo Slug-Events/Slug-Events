@@ -31,6 +31,7 @@ PORT = os.getenv("PORT", "8080")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
+# getting relevant keys
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 CORS(app, supports_credentials=True, origins=[FRONTEND_URL, f"{FRONTEND_URL}/map"])
@@ -90,7 +91,7 @@ def get_google_flow():
 # if FRONTEND_URL is localhost http connection
 if FRONTEND_URL[:4] != "https":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 def create_calendar_event(event, credentials_dict):
     """Creates Google Calendar event from RSVP"""
@@ -135,8 +136,6 @@ def create_calendar_event(event, credentials_dict):
         print(f"Error creating calendar event: {e}")
         return None
 
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-
 @app.route("/login")
 def login():
     """login endpoint"""
@@ -168,9 +167,8 @@ def authorize():
 
     flow = get_google_flow()
     flow.redirect_uri = app.config["GOOGLE_REDIRECT_URI"]
-    print(flow)
     flow.fetch_token(authorization_response=request.url)
-    print(flow.credentials)
+    # print(flow.credentials)
     auth_creds = flow.credentials
 
     try:

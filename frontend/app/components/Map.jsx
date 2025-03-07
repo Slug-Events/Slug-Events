@@ -17,6 +17,7 @@ const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const bounds = {north: 37.19, south: 36.78, east: -121.63, west: -122.46};
 
+// light/dark mode stuff
 const lightModeMap = [];
 const darkModeMap = [
   { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
@@ -105,6 +106,7 @@ const generateShareableLink = (eventId) => {
 };
 
 export default function Map() {
+  // relevant variables
   const [rsvps, setRsvps] = useState({});
   const [showRsvpList, setShowRsvpList] = useState(false);
   const router = useRouter();
@@ -120,17 +122,26 @@ export default function Map() {
     description: "",
     startTime: "",
     endTime: "",
-    category: "",
+    category: "general",
     address: "",
-    capacity: "",
     age_limit: "",
+    capacity: "",
     image: ""
   });
+  const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
+  const areRequiredFieldsFilled = () => {
+    return requiredFields.every(field => formData[field] && formData[field].trim() !== '');
+  };
+  const [isFormValid, setIsFormValid] = useState(false);
+  useEffect(() => {
+    setIsFormValid(areRequiredFieldsFilled());
+  }, [formData]);
+
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
   const mapRef = useRef(null);
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
+  const [isDarkMode, setIsDarkMode] = useState(false);
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme) {
@@ -144,6 +155,7 @@ export default function Map() {
     }
   }, []);
 
+  // handling dark mode
   useEffect(() => {
     if (mapRef.current) {
       mapRef.current.setOptions({
@@ -152,6 +164,8 @@ export default function Map() {
     }
   }, [isDarkMode]);
 
+
+  // turning dark mode on and off
   const toggleDarkMode = () => {
     const newTheme = !isDarkMode ? "dark" : "light";
     setIsDarkMode(!isDarkMode);
@@ -159,6 +173,33 @@ export default function Map() {
     document.body.classList.toggle("dark", !isDarkMode);
   };
 
+  // handling mobile view
+  const [isMobileView, setIsMobileView] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+  };
+
+  // detects mobile screen size
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+
+    // set initial value
+    handleResize();
+
+    // add event listener
+    window.addEventListener('resize', handleResize);
+
+    // cleanup
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, []);
+
+
+  // removing an event from the Google Calendar
   const handleRemoveFromCalendar = async (eventId) => {
     try {
       const response = await fetch(
@@ -171,43 +212,44 @@ export default function Map() {
           }
         }
       );
-  
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to remove from calendar');
       }
-  
+
       alert('Event removed from your Google Calendar!');
-      
-      // Update local state to reflect the change immediately
+
+      // update local state to reflect the change immediately
       if (selectedEvent) {
         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
-        
-        // Create a new calendar_events object without the user's entry
-        const updatedCalendarEvents = {...selectedEvent.calendar_events};
+
+        // create a new calendar_events object without the user's entry
+        const updatedCalendarEvents = { ...selectedEvent.calendar_events };
         delete updatedCalendarEvents[safeEmail];
-        
-        // Update the selected event with new calendar_events
+
+        // update the selected event with new calendar_events
         setSelectedEvent({
           ...selectedEvent,
           calendar_events: updatedCalendarEvents
         });
-        
-        // Also update the event in the markers array
-        setMarkers(markers.map(marker => 
-          marker.eventId === eventId 
-            ? {...marker, calendar_events: updatedCalendarEvents}
+
+        // also update the event in the markers array
+        setMarkers(markers.map(marker =>
+          marker.eventId === eventId
+            ? { ...marker, calendar_events: updatedCalendarEvents }
             : marker
         ));
       }
-      
-      // Optionally, still fetch events to ensure backend and frontend are in sync
+
+      // syncing events with frontend and backend
       fetchEvents();
     } catch (error) {
       alert(error.message);
     }
   };
 
+  // adding an event to Google Calendar
   const handleAddToCalendar = async (eventId) => {
     try {
       const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/add_to_calendar/${eventId}`, {
@@ -217,39 +259,39 @@ export default function Map() {
           'Content-Type': 'application/json'
         }
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to add to calendar');
       }
-  
+
       const data = await response.json();
       const calendarEventId = data.calendarEventId;
-      
+
       alert('Event added to your Google Calendar!');
-      
+
       if (selectedEvent) {
         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
-        
-        // Create a new calendar_events object with the user's new entry
+
+        // create a new calendar_events object with the user's new entry
         const updatedCalendarEvents = {
           ...selectedEvent.calendar_events,
           [safeEmail]: calendarEventId
         };
-        
-        // Update the selected event with new calendar_events
+
+        // update the selected event with new calendar_events
         setSelectedEvent({
           ...selectedEvent,
           calendar_events: updatedCalendarEvents
         });
-        
-        // Also update the event in the markers array
-        setMarkers(markers.map(marker => 
-          marker.eventId === eventId 
-            ? {...marker, calendar_events: updatedCalendarEvents}
+
+        // also update the event in the markers array
+        setMarkers(markers.map(marker =>
+          marker.eventId === eventId
+            ? { ...marker, calendar_events: updatedCalendarEvents }
             : marker
         ));
       }
-      
+
       fetchEvents();
     } catch (error) {
       if (error.message.includes('not authorized')) {
@@ -260,6 +302,7 @@ export default function Map() {
     }
   };
 
+  // ensuring tokens aren't permanent.
   useEffect(() => {
     const handleToken = () => {
       const token = new URLSearchParams(window.location.search).get("token");
@@ -273,7 +316,7 @@ export default function Map() {
 
       try {
         setUser(jwtDecode(storedToken).user);
-      } catch (error) {
+      } catch {
         localStorage.removeItem("token");
         router.push("/");
       }
@@ -283,6 +326,7 @@ export default function Map() {
     fetchEvents();
   }, [router]);
 
+  // getting all events
   const fetchEvents = async () => {
     try {
       const response = await fetch(
@@ -296,8 +340,6 @@ export default function Map() {
         }
       );
 
-
-
       if (!response.ok) throw new Error("Failed to fetch events");
 
       const data = await response.json();
@@ -310,7 +352,7 @@ export default function Map() {
             description: event.description,
             startTime: event.startTime,
             endTime: event.endTime,
-            category : event.category,
+            category: event.category,
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
@@ -327,6 +369,7 @@ export default function Map() {
     }
   };
 
+  // setting a user to RSVP
   const handleRsvp = async (eventId) => {
     try {
       const response = await fetch(
@@ -341,7 +384,7 @@ export default function Map() {
 
       if (!response.ok) throw new Error("Failed to RSVP");
 
-      // Update local RSVP state
+      // update local RSVP state
       setRsvps((prev) => ({
         ...prev,
         [eventId]: [...(prev[eventId] || []), user.email],
@@ -351,6 +394,7 @@ export default function Map() {
     }
   };
 
+  // removing a user from the RSVP list
   const handleUnrsvp = async (eventId) => {
     try {
       const response = await fetch(
@@ -369,7 +413,7 @@ export default function Map() {
 
       if (!response.ok) throw new Error("Failed to remove RSVP");
 
-      // Update local RSVP state
+      // update local RSVP state
       setRsvps((prev) => ({
         ...prev,
         [eventId]: prev[eventId].filter((email) => email !== user.email),
@@ -379,7 +423,7 @@ export default function Map() {
     }
   };
 
-  // Add this effect to fetch RSVPs when an event is selected
+  // fetches RSVPs when an event is selected
   useEffect(() => {
     const fetchRsvps = async () => {
       if (selectedEvent?.eventId) {
@@ -409,6 +453,7 @@ export default function Map() {
     fetchRsvps();
   }, [selectedEvent]);
 
+  // handles creating and event and sending to backend
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
       alert("Please select a location on the map");
@@ -473,16 +518,8 @@ export default function Map() {
     }
   };
 
+  // handles editing an event and sending it to the backend
   const handleEditEvent = async () => {
-    // if (!selectedLocation) {
-    //   alert("Please select a location on the map");
-    //   return;
-    // }
-
-    // if (!user?.email) {
-    //   alert("User email not found. Please sign in again.");
-    //   return;
-    // }
     try {
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_BACKEND_URL}/update_event`,
@@ -538,6 +575,7 @@ export default function Map() {
     }
   };
 
+  // handles deleting an event and removing it from the backend
   const handleDeleteEvent = async () => {
     if (!selectedEvent) {
       alert("Please select an event on the map");
@@ -573,6 +611,7 @@ export default function Map() {
     }
   }
 
+  // handles what filter to apply to events
   const filterEvents = async (option) => {
     try {
       const response = await fetch(
@@ -614,6 +653,7 @@ export default function Map() {
     }
   }
 
+  // handles filtering events by time
   const filterTimes = async (time) => {
     try {
       const response = await fetch(
@@ -655,31 +695,22 @@ export default function Map() {
     }
   }
 
+  // signs user out and removes token
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
   };
 
+  // sets the current location to where clicked
 const handleMapClick = async (e) => {
   if (!showCreateForm) return;
 
-  let adjustedLat = e.latLng.lat();
-  let adjustedLng = e.latLng.lng();
-  const buffer = 0.07;
+    const lat = e.latLng.lat();
+    const lng = e.latLng.lng();
+    updateFormLocation(lat, lng);
+  };
 
-  if (adjustedLat >= bounds.north - buffer) adjustedLat -= buffer;
-  else if (adjustedLat <= bounds.south + buffer) adjustedLat += buffer;
-
-  if (adjustedLng >= bounds.east - buffer) adjustedLng -= buffer;
-  else if (adjustedLng <= bounds.west + buffer) adjustedLng += buffer;
-
-  updateFormLocation(adjustedLat, adjustedLng);
-
-  if (mapRef.current) {
-    mapRef.current.panTo({ lat: adjustedLat, lng: adjustedLng });
-  }
-};
-
+  // updates current location
   const updateFormLocation = (lat, lng) => {
     setSelectedLocation({ lat, lng });
 
@@ -708,6 +739,7 @@ const handleMapClick = async (e) => {
     }
   };
 
+  // allows for clicking around the map to select a location
   const handlePlaceSelect = () => {
     if (autocompleteRef.current) {
       const place = autocompleteRef.current.getPlace();
@@ -720,13 +752,15 @@ const handleMapClick = async (e) => {
     }
   };
 
+  // retrieving the date/time
   function getLocalDatetime() {
     const now = new Date();
-    // Adjust to local timezone by subtracting the offset
+    // adjust to local timezone by subtracting the offset
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     return now.toISOString().slice(0, 16);
   }
 
+  // encoding uploaded image to bits
   function encodeImageToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -735,64 +769,185 @@ const handleMapClick = async (e) => {
       reader.onerror = error => reject(error);
     });
   }
-  
+
   return (
+    // top of the site
     <div className={`h-screen flex flex-col ${isDarkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-4 px-6 flex justify-between items-center`}>
-        <div className="flex items-center space-x-6">
-          <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+      {/* Mobile Header */}
+      {isMobileView ? (
+        <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-3 px-4 flex justify-between items-center`}>
+          <h1 className={`text-xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
             <span className="text-blue-600">Slug Events</span>
           </h1>
-          <button
-            onClick={handleCreateButtonClick}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            Create Event
-          </button>
-          <select
-            className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
-            defaultValue=""
-            onChange={(e) => {
-              if (e.target.value === "") {
-                fetchEvents()
-              }else{
-                filterEvents(e.target.value)
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={toggleDarkMode}
+              className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-600 text-white'} p-2 rounded-lg hover:bg-gray-700 transition-colors text-sm`}
+            >
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+            <button
+              onClick={toggleMobileMenu}
+              className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-blue-600 text-white'} p-2 rounded-lg hover:bg-blue-700 transition-colors`}
+            >
+              {mobileMenuOpen ? '✕' : '☰'}
+            </button>
+          </div>
+        </header>
+      ) : (
+        /* Desktop Header */
+        <header className={`${isDarkMode ? 'bg-gray-800 shadow-md' : 'bg-white shadow-sm'} py-4 px-6 flex justify-between items-center`}>
+          <div className="flex items-center space-x-6">
+            <h1 className={`text-2xl font-bold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
+              <span className="text-blue-600">Slug Events</span>
+            </h1>
+            <button
+              onClick={handleCreateButtonClick}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Create Event
+            </button>
+            <select
+              className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
+              defaultValue=""
+              onChange={(e) => {
+                if (e.target.value === "") {
+                  fetchEvents()
+                } else {
+                  filterEvents(e.target.value)
+                }
+              }}
+            >
+              <option value="">All Categories</option>
+              <option value="general">General</option>
+              <option value="sports">Sports</option>
+              <option value="ucsc-club">UCSC Club</option>
+              <option value="social">Social</option>
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <input
+              type="datetime-local"
+              className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
+              defaultValue={getLocalDatetime()}
+              onChange={(e) =>
+                filterTimes(e.target.value)
               }
-            }}
-          >
-            <option value="">All Categories</option>
-            <option value="general">General</option>
-            <option value="sports">Sports</option>
-            <option value="ucsc-club">UCSC Club</option>
-            <option value="social">Social</option>
-          </select>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="datetime-local"
-            className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
-            defaultValue={getLocalDatetime()}
-            onChange={(e) =>
-              filterTimes(e.target.value)
-            }
+            />
+          </div>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDarkMode}
+              className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-600 text-white'} px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors`}
+            >
+              {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
+            </button>
+            <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Welcome, {user?.name}</span>
+            <button
+              onClick={handleSignOut}
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+            >
+              Sign Out
+            </button>
+          </div>
+        </header>
+      )}
+      {isMobileView && mobileMenuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-black bg-opacity-50"
+            onClick={toggleMobileMenu}
           />
-        </div>
-        <div className="flex items-center gap-4">
-          <button
-            onClick={toggleDarkMode}
-            className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-600 text-white'} px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors`}
+          <div
+            className={`
+                    fixed right-0 top-0 bottom-0 w-3/4 z-50 
+                    ${isDarkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-800'}
+                    shadow-lg transform transition-transform duration-300 ease-in-out
+                    translate-x-0
+                  `}
           >
-            {isDarkMode ? '☀️ Light Mode' : '🌙 Dark Mode'}
-          </button>
-          <span className={`${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>Welcome, {user?.name}</span>
-          <button
-            onClick={handleSignOut}
-            className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Sign Out
-          </button>
-        </div>
-      </header>
+            <div className="flex justify-between items-center p-2 border-b border-gray-200 dark:border-gray-700">
+              <h2 className="text-lg font-bold flex-1 text-center">Menu</h2>
+              <button
+                onClick={toggleMobileMenu}
+                className={`
+                        ${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-gray-200 text-gray-800'} 
+                        p-1 rounded-lg
+                      `}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-2 space-y-3">
+              <p className="text-xs mb-2 text-center">Welcome, {user?.name}</p>
+
+              <button
+                onClick={() => {
+                  handleCreateButtonClick();
+                  toggleMobileMenu();
+                }}
+                className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors"
+              >
+                Create Event
+              </button>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Filter by Category</label>
+                <select
+                  className={`
+                          w-full p-1.5 border rounded text-xs
+                          ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}
+                        `}
+                  defaultValue=""
+                  onChange={(e) => {
+                    if (e.target.value === "") {
+                      fetchEvents();
+                    } else {
+                      filterEvents(e.target.value);
+                    }
+                    toggleMobileMenu();
+                  }}
+                >
+                  <option value="">All Categories</option>
+                  <option value="general">General</option>
+                  <option value="sports">Sports</option>
+                  <option value="ucsc-club">UCSC Club</option>
+                  <option value="social">Social</option>
+                </select>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-medium">Filter by Date</label>
+                <input
+                  type="datetime-local"
+                  className={`
+                          w-full p-1.5 border rounded text-xs
+                          ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}
+                        `}
+                  defaultValue={getLocalDatetime()}
+                  onChange={(e) => {
+                    filterTimes(e.target.value);
+                    toggleMobileMenu();
+                  }}
+                />
+              </div>
+
+              <div className="pt-2 mt-2 border-t border-gray-200 dark:border-gray-700">
+                <button
+                  onClick={() => {
+                    handleSignOut();
+                    toggleMobileMenu();
+                  }}
+                  className="w-full bg-red-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-red-700 transition-colors"
+                >
+                  Sign Out
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       <div className="flex-1 relative">
         <LoadScript
@@ -821,7 +976,7 @@ const handleMapClick = async (e) => {
           >
             {markers.map((marker, index) => (
               <Marker
-                key={index}
+                key={`marker-${marker.eventId || index}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 onClick={() => {
                   setSelectedEvent(marker)
@@ -856,6 +1011,7 @@ const handleMapClick = async (e) => {
                 }}
               />
             ))}
+            {/* Create Event Popup */}
             {showCreateForm && selectedLocation && (
               <InfoWindow
                 position={selectedLocation}
@@ -864,7 +1020,7 @@ const handleMapClick = async (e) => {
                   setSelectedLocation(null);
                 }}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Create New Event
                   </h3>
@@ -913,15 +1069,6 @@ const handleMapClick = async (e) => {
                       }
                     />
                   </div>
-                  <input
-                    type="url"
-                    placeholder="Registration URL (optional)"
-                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
-                    value={formData.registration}
-                    onChange={(e) =>
-                      setFormData({ ...formData, registration: e.target.value })
-                    }
-                  />
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="datetime-local"
@@ -947,7 +1094,6 @@ const handleMapClick = async (e) => {
                       setFormData({ ...formData, category: e.target.value })
                     }
                   >
-                    <option value="">All Categories</option>
                     <option value="general">General</option>
                     <option value="sports">Sports</option>
                     <option value="ucsc-club">UCSC Club</option>
@@ -963,7 +1109,10 @@ const handleMapClick = async (e) => {
                   />
 
                   <div className="mb-2">
-                    <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="image-upload"
+                      className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
+                    >
                       Event Banner (Optional)
                     </label>
                     <input
@@ -971,32 +1120,34 @@ const handleMapClick = async (e) => {
                       id="image-upload"
                       accept="image/*"
                       className="w-full p-2 border rounded"
-                      onChange={async (e) =>
-                        {
-                          if(e.target.files[0].size > 286720) {
-                            alert("File is too big! Please ensure it is less than 280KB.");
-                            e.target.value = "";
-                          }
-                          else {
-                            const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                            console.log("Uploaded image in base64: ", image_base64String);
-                            setFormData({ ...formData, image: image_base64String });
-                          }
+                      onChange={async (e) => {
+                        if (e.target.files[0].size > 286720) {
+                          alert("File is too big! Please ensure it is less than 280KB.");
+                          e.target.value = "";
                         }
+                        else {
+                          const image_base64String = await encodeImageToBase64(e.target.files[0]);
+                          // console.log("Uploaded image in base64: ", image_base64String);
+                          setFormData({ ...formData, image: image_base64String });
+                        }
+                      }
                       }
                     />
                   </div>
-
                   <button
                     onClick={handleCreateEvent}
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                    className={`w-full py-2 rounded mt-2 ${isFormValid
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      }`}
+                    disabled={!isFormValid}
                   >
                     Create Event
                   </button>
                 </div>
               </InfoWindow>
             )}
-            
+            {/* Editing Event Popup */}
             {showEditForm && (
               <InfoWindow
                 position={selectedLocation}
@@ -1004,8 +1155,8 @@ const handleMapClick = async (e) => {
                   setShowEditForm(false);
                 }}
               >
-                <div className="bg-white rounded-lg min-w-[300px]">
-                  <h3 className="font-bold text-lg border-b pb-2">
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
+                  <h3 className={`font-bold text-lg border-b pb-2 ${isDarkMode ? 'border-gray-700' : ''}`}>
                     Edit Event
                   </h3>
                   <Autocomplete
@@ -1017,7 +1168,7 @@ const handleMapClick = async (e) => {
                     <input
                       type="text"
                       placeholder="Event Address"
-                      className="w-full p-2 border rounded mb-2"
+                      className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                       value={formData.address}
                       onChange={(e) =>
                         setFormData({ ...formData, address: e.target.value })
@@ -1027,7 +1178,7 @@ const handleMapClick = async (e) => {
                   <input
                     type="text"
                     placeholder="Event Name"
-                    className="w-full p-2 border rounded mb-2"
+                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                     value={formData.title}
                     onChange={(e) =>
                       setFormData({ ...formData, title: e.target.value })
@@ -1037,7 +1188,7 @@ const handleMapClick = async (e) => {
                     <input
                       type="number"
                       placeholder="Capacity (optional)"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                       value={formData.capacity}
                       onChange={(e) =>
                         setFormData({ ...formData, capacity: e.target.value })
@@ -1046,26 +1197,17 @@ const handleMapClick = async (e) => {
                     <input
                       type="number"
                       placeholder="Age Limit (optional)"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                       value={formData.age_limit}
                       onChange={(e) =>
                         setFormData({ ...formData, age_limit: e.target.value })
                       }
                     />
                   </div>
-                  <input
-                    type="url"
-                    placeholder="Registration URL (optional)"
-                    className="w-full p-2 border rounded mb-2"
-                    value={formData.registration}
-                    onChange={(e) =>
-                      setFormData({ ...formData, registration: e.target.value })
-                    }
-                  />
                   <div className="grid grid-cols-2 gap-2">
                     <input
                       type="datetime-local"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
                       value={formData.startTime}
                       onChange={(e) =>
                         setFormData({ ...formData, startTime: e.target.value })
@@ -1073,7 +1215,7 @@ const handleMapClick = async (e) => {
                     />
                     <input
                       type="datetime-local"
-                      className="p-2 border rounded"
+                      className={`p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
                       value={formData.endTime}
                       onChange={(e) =>
                         setFormData({ ...formData, endTime: e.target.value })
@@ -1081,7 +1223,7 @@ const handleMapClick = async (e) => {
                     />
                   </div>
                   <select
-                    className="w-full p-2 border rounded"
+                    className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
                     value={formData.category}
                     onChange={(e) =>
                       setFormData({ ...formData, category: e.target.value })
@@ -1094,7 +1236,7 @@ const handleMapClick = async (e) => {
                   </select>
                   <textarea
                     placeholder="Event Description"
-                    className="w-full p-2 border rounded mb-2"
+                    className={`w-full p-2 border rounded mb-2 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : ''}`}
                     value={formData.description}
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
@@ -1102,7 +1244,10 @@ const handleMapClick = async (e) => {
                   />
 
                   <div className="mb-2">
-                    <label htmlFor="image-upload" className="block text-sm font-medium text-gray-700 mb-1">
+                    <label
+                      htmlFor="image-upload"
+                      className={`block text-sm font-medium mb-1 ${isDarkMode ? 'text-white' : 'text-gray-700'}`}
+                    >
                       Event Banner (Optional)
                     </label>
                     <input
@@ -1110,42 +1255,47 @@ const handleMapClick = async (e) => {
                       id="image-upload"
                       accept="image/*"
                       className="w-full p-2 border rounded"
-                      onChange={async (e) =>
-                        {
-                          if(e.target.files[0].size > 286720) {
-                            alert("File is too big! Please ensure it is less than 280KB.");
-                            e.target.value = "";
-                          }
-                          else {
-                            const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                            console.log("Uploaded image in base64: ", image_base64String);
-                            setFormData({ ...formData, image: image_base64String });
-                          }
+                      onChange={async (e) => {
+                        if (e.target.files[0].size > 286720) {
+                          alert("File is too big! Please ensure it is less than 280KB.");
+                          e.target.value = "";
                         }
+                        else {
+                          const image_base64String = await encodeImageToBase64(e.target.files[0]);
+                          // console.log("Uploaded image in base64: ", image_base64String);
+                          setFormData({ ...formData, image: image_base64String });
+                        }
+                      }
                       }
                     />
                   </div>
 
                   <button
                     onClick={handleEditEvent}
-                    className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700 mt-2"
+                    className={`w-full py-2 rounded mt-2 ${isFormValid
+                        ? 'bg-green-600 text-white hover:bg-green-700'
+                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      }`}
+                    disabled={!isFormValid}
                   >
                     Edit Event
                   </button>
                 </div>
               </InfoWindow>
             )}
+            {/* Selected Event Popup */}
             {selectedEvent && (
               <InfoWindow
                 position={{ lat: selectedEvent.lat, lng: selectedEvent.lng }}
                 onCloseClick={() => setSelectedEvent(null)}
               >
-                <div className={`${isDarkMode ? 'bg-gray-800 text-gray-100' : 'bg-white'} rounded-lg shadow-lg min-w-[300px]`}>
+                <div className={`${isDarkMode ? 'bg-gray-700 text-gray-100' : 'bg-white'} rounded-lg shadow-lg ${isMobileView ? 'min-w-[250px]' : 'min-w-[300px]'}`}>
                   {selectedEvent.image && (
-                    <div 
+                    <div
                       className="h-32 bg-cover bg-center mb-2"
                       style={{
-                      backgroundImage: `url(${selectedEvent.image})`}}
+                        backgroundImage: `url(${selectedEvent.image})`
+                      }}
                     ></div>
                   )}
                   <div className="flex justify-between items-start mb-2">
@@ -1205,21 +1355,6 @@ const handleMapClick = async (e) => {
                         {selectedEvent.age_limit || "None"}
                       </span>
                     </div>
-                    {selectedEvent.registration && (
-                      <div className="flex items-center">
-                        <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
-                          Registration:
-                        </span>
-                        <a
-                          href={selectedEvent.registration}
-                          className="text-xs text-blue-600 hover:underline"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          Link
-                        </a>
-                      </div>
-                    )}
                     <div className="flex items-center">
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
                         Category:
@@ -1228,15 +1363,15 @@ const handleMapClick = async (e) => {
                         {selectedEvent.category}
                       </span>
                     </div>
-                    
+
                     {/* Calendar Controls Section */}
                     <div className="mt-2 pt-2 border-t">
                       {(() => {
-                        // Check if this event is in the user's calendar
+                        // check if this event is in the user's calendar
                         const safeEmail = user?.email?.replace('@', '_at_').replace('.', '_dot_');
-                        const isInCalendar = selectedEvent?.calendar_events && 
-                                            selectedEvent?.calendar_events[safeEmail];
-                        
+                        const isInCalendar = selectedEvent?.calendar_events &&
+                          selectedEvent?.calendar_events[safeEmail];
+
                         return (
                           <div className="flex justify-between items-center">
                             {isInCalendar ? (
@@ -1268,7 +1403,7 @@ const handleMapClick = async (e) => {
                         );
                       })()}
                     </div>
-                    
+
                     {/* RSVP Section */}
                     <div className="mt-4 space-y-2 border-t pt-4">
                       <div className="flex justify-between items-center">
@@ -1289,7 +1424,7 @@ const handleMapClick = async (e) => {
                             </button>
                           )}
                           <button
-                            onClick={(e) => {
+                            onClick={() => {
                               setShowRsvpList(!showRsvpList);
                             }}
                             className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
@@ -1297,12 +1432,12 @@ const handleMapClick = async (e) => {
                             {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
                           </button>
                         </div>
-                        <span className="text-sm text-gray-600">
+                        <span className="text-sm text-gray-500">
                           {rsvps[selectedEvent.eventId]?.length || 0} attending
                         </span>
                       </div>
                     </div>
-                    
+
                     {/* Event Owner Actions */}
                     {selectedEvent.host === user?.email && (
                       <div className="flex flex-col space-y-2 mt-4 pt-4 border-t">
@@ -1313,10 +1448,9 @@ const handleMapClick = async (e) => {
                               description: selectedEvent.description,
                               startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
                               endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
-                              capacity: selectedEvent.capacity || "None",
+                              capacity: selectedEvent.capacity || "Unlimited",
                               age_limit: selectedEvent.age_limit || "None",
                               image: selectedEvent.image,
-                              registration: selectedEvent.registration,
                               category: selectedEvent.category,
                               address: selectedEvent.address,
                             });
@@ -1329,7 +1463,7 @@ const handleMapClick = async (e) => {
                           Edit Event
                         </button>
                         <button
-                          onClick={() => {handleDeleteEvent(); setSelectedEvent(null);}}
+                          onClick={() => { handleDeleteEvent(); setSelectedEvent(null); }}
                           className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
                         >
                           Delete Event
@@ -1345,6 +1479,7 @@ const handleMapClick = async (e) => {
               onClose={() => setShowRsvpList(false)}
               rsvps={rsvps[selectedEvent?.eventId] || []}
               eventTitle={selectedEvent?.title}
+              isDarkMode={isDarkMode}
             />
           </GoogleMap>
         </LoadScript>

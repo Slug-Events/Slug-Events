@@ -16,6 +16,7 @@ const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const bounds = {north: 37.19, south: 36.78, east: -121.63, west: -122.46};
+const eventBounds = {north: 37.06, south: 36.78, east: -121.72, west: -122.34};
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -702,12 +703,29 @@ export default function Map() {
   };
 
   // sets the current location to where clicked
-const handleMapClick = async (e) => {
-  if (!showCreateForm) return;
-
+  const handleMapClick = async (e) => {
+    if (!showCreateForm) return;
+  
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
+  
+    // Define strict bounds to prevent clicks outside
+    if (
+      lat > eventBounds.north || 
+      lat < eventBounds.south || 
+      lng > eventBounds.east || 
+      lng < eventBounds.west
+    ) {
+      alert("You can't place an event outside the allowed area.");
+      return; // Stop the function if the click is out of bounds
+    }
+  
     updateFormLocation(lat, lng);
+  
+    // Center map on the clicked location
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat, lng });
+    }
   };
 
   // updates current location
@@ -728,7 +746,16 @@ const handleMapClick = async (e) => {
     setShowCreateForm(true);
     if (mapRef.current) {
       const center = mapRef.current.getCenter();
-      updateFormLocation(center.lat(), center.lng());
+      let lat = center.lat();
+      let lng = center.lng();
+      const buffer = 0.01;
+
+      if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
+      if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
+      if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
+      if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
+  
+      updateFormLocation(lat, lng);
     }
   };
 

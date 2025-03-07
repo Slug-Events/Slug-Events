@@ -15,7 +15,8 @@ import {
 const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
-const bounds = { north: 37.1, south: 36.8, east: -121.82, west: -122.16 };
+const bounds = {north: 37.19, south: 36.78, east: -121.63, west: -122.46};
+const eventBounds = {north: 37.06, south: 36.78, east: -121.72, west: -122.34};
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -99,6 +100,11 @@ const darkModeMap = [
     stylers: [{ color: "#17263c" }],
   },
 ];
+
+const generateShareableLink = (eventId) => {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/event/${eventId}`;
+};
 
 export default function Map() {
   // relevant variables
@@ -690,7 +696,7 @@ export default function Map() {
     }
   }
 
-  // signs user out and removes token
+  // signs user out and remove token
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
@@ -699,10 +705,27 @@ export default function Map() {
   // sets the current location to where clicked
   const handleMapClick = async (e) => {
     if (!showCreateForm) return;
-
+  
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
+  
+    // Define strict bounds to prevent clicks outside
+    if (
+      lat > eventBounds.north || 
+      lat < eventBounds.south || 
+      lng > eventBounds.east || 
+      lng < eventBounds.west
+    ) {
+      alert("You can't place an event outside the allowed area.");
+      return; // Stop the function if the click is out of bounds
+    }
+  
     updateFormLocation(lat, lng);
+  
+    // Center map on the clicked location
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat, lng });
+    }
   };
 
   // updates current location
@@ -723,7 +746,16 @@ export default function Map() {
     setShowCreateForm(true);
     if (mapRef.current) {
       const center = mapRef.current.getCenter();
-      updateFormLocation(center.lat(), center.lng());
+      let lat = center.lat();
+      let lng = center.lng();
+      const buffer = 0.01;
+
+      if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
+      if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
+      if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
+      if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
+  
+      updateFormLocation(lat, lng);
     }
   };
 
@@ -974,14 +1006,35 @@ export default function Map() {
                 key={`marker-${marker.eventId || index}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 onClick={() => {
-                  setShowCreateForm(false);
-                  setShowEditForm(false);
-                  setShowRsvpList(false);
-
-                  setSelectedEvent(() => null);
-                  requestAnimationFrame(() => {
-                    setSelectedEvent(() => marker);
-                  });
+                  setSelectedEvent(marker)
+                  if (mapRef.current) {
+                    const map = mapRef.current;
+                    const mapBounds = map.getBounds();
+            
+                    if (mapBounds) {
+                      const buffer = 0.07; // Moves the map slightly inward
+                      
+                      let newLat = marker.lat;
+                      let newLng = marker.lng;
+            
+                      // Check if the marker is too close to any boundary and adjust
+                      if (marker.lat >= bounds.north - buffer) {
+                        newLat -= buffer;
+                      }
+                      if (marker.lat <= bounds.south + buffer) {
+                        newLat += buffer;
+                      }
+                      if (marker.lng >= bounds.east - buffer) {
+                        newLng -= buffer;
+                      }
+                      if (marker.lng <= bounds.west + buffer) {
+                        newLng += buffer;
+                      }
+            
+                      // Move the map to the adjusted position
+                      map.panTo({ lat: newLat, lng: newLng });
+                    }
+                  }
                 }}
               />
             ))}
@@ -1363,6 +1416,16 @@ export default function Map() {
                                 Add to Calendar
                               </button>
                             )}
+                            <button
+                              onClick={() => {
+                                const shareableLink = generateShareableLink(selectedEvent.eventId);
+                                navigator.clipboard.writeText(shareableLink);
+                                alert("Event link copied to clipboard!");
+                              }}
+                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
+                            >
+                              Share Event
+                            </button>
                           </div>
                         );
                       })()}

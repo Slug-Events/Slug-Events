@@ -696,7 +696,7 @@ export default function Map() {
     }
   }
 
-  // signs user out and removes token
+  // signs user out and remove token
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");

@@ -16,7 +16,7 @@ const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const bounds = {north: 37.1, south: 36.8, east: -121.82, west: -122.16};
-const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-next-app-398513784123.us-central1.run.app"
+const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-398513784123.us-west1.run.app"
 
 // light/dark mode stuff
 const lightModeMap = [];

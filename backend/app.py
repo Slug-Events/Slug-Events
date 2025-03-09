@@ -6,7 +6,7 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
-from datetime import datetime, timezone, timedelta
+from datetime import datetime
 import jwt
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
@@ -14,9 +14,9 @@ from flask_cors import CORS
 from google.oauth2 import id_token
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
+from google.cloud.firestore_v1.base_query import FieldFilter
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
-from google.cloud.firestore_v1.base_query import FieldFilter
 
 from event import Event
 from helpers import get_user_email, get_id
@@ -299,7 +299,7 @@ def is_expired(event):
     current_time = int(datetime.now().timestamp())
     end_time_obj = event_obj.get("endTime")
     if not end_time_obj:
-        return False 
+        return False
     end_time = int(end_time_obj.timestamp())
     if end_time < current_time:
         event_ref = db.collection("events").document(event.id)

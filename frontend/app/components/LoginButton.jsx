@@ -2,7 +2,7 @@
 
 export default function LoginButton() {
   const handleLogin = () => {
-    const backendUrl = process.env.NEXT_PUBLIC_LOGIN_URL;
+    const backendUrl = process.env.NEXT_PUBLIC_LOGIN_URL || "https://slug-events-398513784123.us-west1.run.app/login";
     console.log(backendUrl)
     if (!backendUrl) {
       console.error("Environment variable NEXT_PUBLIC_LOGIN_URL is not defined.");

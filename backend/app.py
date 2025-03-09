@@ -249,7 +249,10 @@ def filter_events(option):
     try:
         print("FILTER OPTION:", option)
         state = {"events":[]}
-        events = db.collection("events").where(filter=FieldFilter("status", "==", "active")).stream()
+        events = (
+            db.collection("events")
+            .where(filter=FieldFilter("status", "==", "active"))
+            .stream())
         for event in events:
             if is_expired(event):  # Skip expired events
                 continue
@@ -268,10 +271,12 @@ def filter_times(time):
     try:
         print("FILTER OPTION:", time)
         dt_object = datetime.strptime(time, "%Y-%m-%dT%H:%M")
-        print(dt_object)
         current_time = int(dt_object.timestamp())
         state = {"events":[]}
-        events = db.collection("events").where(filter=FieldFilter("status", "==", "active")).stream()
+        events = (
+            db.collection("events")
+            .where(filter=FieldFilter("status", "==", "active"))
+            .stream())
         for event in events:
             if is_expired(event):  # Skip expired events
                 continue
@@ -295,9 +300,7 @@ def is_expired(event):
     end_time_obj = event_obj.get("endTime")
     if not end_time_obj:
         return False 
-
     end_time = int(end_time_obj.timestamp())
-
     if end_time < current_time:
         event_ref = db.collection("events").document(event.id)
         event_ref.update({"status": "expired"})  # Update Firestore
@@ -310,7 +313,10 @@ def get_state():
     """Endpoint to retrieve map state from Firestore."""
     try:
         state = {"events": []}
-        events = db.collection("events").where(filter=FieldFilter("status", "==", "active")).stream()
+        events = (
+            db.collection("events")
+            .where(filter=FieldFilter("status", "==", "active"))
+            .stream())
         for event in events:
             if is_expired(event):  # check if event recenlt expired
                 continue

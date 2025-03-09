@@ -1,7 +1,7 @@
 """
 Class for event object
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, Dict
 from flask import request, jsonify
 
@@ -38,7 +38,7 @@ class Event:
         self.age_limit = age_limit
         self.owner_email = owner_email
         self.db = db
-        self.created_at = datetime.now()
+        self.created_at = datetime.now(timezone.utc)
         self.status = "active"
 
     def to_dict(self):

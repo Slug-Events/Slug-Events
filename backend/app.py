@@ -6,7 +6,7 @@ Flask backend for handling Google OAuth, database updates
 
 import os
 import secrets
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 import jwt
 import firebase_admin
 from flask import Flask, redirect, url_for, session, request, jsonify
@@ -16,6 +16,7 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from dotenv import load_dotenv
 from firebase_admin import credentials, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 from event import Event
 from helpers import get_user_email, get_id
@@ -180,7 +181,6 @@ def update_event():
     updated_event.update(event_id)
     return jsonify({"message": "Event updated successfully"}), 200
 
-
 @app.route("/delete_event/<event_id>", methods=["DELETE"])
 def delete_event(event_id):
     """Endpoint for deleting an existing event"""
@@ -249,8 +249,10 @@ def filter_events(option):
     try:
         print("FILTER OPTION:", option)
         state = {"events":[]}
-        events = db.collection("events").stream()
+        events = db.collection("events").where(filter=FieldFilter("status", "==", "active")).stream()
         for event in events:
+            if is_expired(event):  # Skip expired events
+                continue
             event_obj = event.to_dict()
             if event_obj.get("category") == option:
                 event_obj["eventId"] = event.id
@@ -266,10 +268,13 @@ def filter_times(time):
     try:
         print("FILTER OPTION:", time)
         dt_object = datetime.strptime(time, "%Y-%m-%dT%H:%M")
+        print(dt_object)
         current_time = int(dt_object.timestamp())
         state = {"events":[]}
-        events = db.collection("events").stream()
+        events = db.collection("events").where(filter=FieldFilter("status", "==", "active")).stream()
         for event in events:
+            if is_expired(event):  # Skip expired events
+                continue
             event_obj = event.to_dict()
             start_time_obj = event_obj.get("startTime")
             end_time_obj = event_obj.get("endTime")
@@ -283,20 +288,37 @@ def filter_times(time):
         print(e)
         return jsonify({"status": 500, "error": str(e)}), 500
 
+def is_expired(event):
+    """Checks if an event is expired and updates Firestore if necessary."""
+    event_obj = event.to_dict()
+    current_time = int(datetime.now().timestamp())
+    end_time_obj = event_obj.get("endTime")
+    if not end_time_obj:
+        return False 
+
+    end_time = int(end_time_obj.timestamp())
+
+    if end_time < current_time:
+        event_ref = db.collection("events").document(event.id)
+        event_ref.update({"status": "expired"})  # Update Firestore
+        print(f"Event {event.id} marked as expired.")
+        return True  # Return True to indicate event is expired
+    return False  # Event is still active
+
 @app.route("/state")
 def get_state():
-    """Endpoint to retrieve map state from db"""
+    """Endpoint to retrieve map state from Firestore."""
     try:
         state = {"events": []}
-        events = db.collection("events").stream()
+        events = db.collection("events").where(filter=FieldFilter("status", "==", "active")).stream()
         for event in events:
+            if is_expired(event):  # check if event recenlt expired
+                continue
             event_obj = event.to_dict()
             event_obj["eventId"] = event.id
             state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
-
     except Exception as e:
-        print(e)
         return jsonify({"status": 500, "error": str(e)}), 500
 
 

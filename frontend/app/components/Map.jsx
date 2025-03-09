@@ -36,7 +36,7 @@ export default function Map() {
     category: "",
     address: "",
     capacity: "",
-    age_limit: ""
+    age_limit: "",
   });
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
@@ -183,6 +183,12 @@ export default function Map() {
     fetchRsvps();
   }, [selectedEvent]);
 
+  const convertLocalToUTC = (localDateTime) => {
+    if (!localDateTime) return ""; // Handle empty inputs
+    const date = new Date(localDateTime);  // Parse input as local time
+    return date.toISOString(); // Convert to UTC in ISO 8601 format
+  };
+
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
       alert("Please select a location on the map");
@@ -205,6 +211,8 @@ export default function Map() {
           },
           body: JSON.stringify({
             ...formData,
+            startTime: convertLocalToUTC(formData.startTime), // Convert to UTC
+            endTime: convertLocalToUTC(formData.endTime),     // Convert to UTC
             location: {
               latitude: selectedLocation.lat,
               longitude: selectedLocation.lng,
@@ -616,7 +624,8 @@ export default function Map() {
                       type="number"
                       placeholder="Age Limit (optional)"
                       className="p-2 border rounded"
-                      value={formData.age_limit}
+                      //value={formData.age_limit}
+                      defaultValue = ""
                       onChange={(e) =>
                         setFormData({ ...formData, age_limit: e.target.value })
                       }

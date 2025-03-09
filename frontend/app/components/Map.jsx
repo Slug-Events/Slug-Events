@@ -937,7 +937,7 @@ export default function Map() {
 
       <div className="flex-1 relative">
         <LoadScript
-          googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}
+          googleMapsApiKey={process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "AIzaSyCpYFAuo2tDBiY7HWZfvvySadu6bDboWyo"}
           libraries={libraries}
           onLoad={() => (geocoder.current = new window.google.maps.Geocoder())}
         >

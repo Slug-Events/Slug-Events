@@ -102,10 +102,6 @@ const darkModeMap = [
   },
 ];
 
-const generateShareableLink = (eventId) => {
-  const baseUrl = window.location.origin;
-  return `${baseUrl}/event/${eventId}`;
-};
 
 export default function Map() {
   // relevant variables
@@ -1510,16 +1506,6 @@ export default function Map() {
                     {/* Event Owner Actions */}
                     {selectedEvent.host === user?.email && (
                       <div className="flex flex-col space-y-2 mt-4 pt-4 border-t">
-                        <button
-                          onClick={() => {
-                            const shareableLink = generateShareableLink(selectedEvent.eventId);
-                            navigator.clipboard.writeText(shareableLink);
-                            alert("Event link copied to clipboard!");
-                          }}
-                          className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
-                        >
-                          Share Event
-                        </button>
                         <div className="flex justify-between items-center">
                           <button
                             onClick={() => {

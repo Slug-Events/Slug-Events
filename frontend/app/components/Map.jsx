@@ -102,10 +102,6 @@ const darkModeMap = [
   },
 ];
 
-const generateShareableLink = (eventId) => {
-  const baseUrl = window.location.origin;
-  return `${baseUrl}/event/${eventId}`;
-};
 
 export default function Map() {
   // relevant variables

@@ -5,11 +5,10 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 """
 
 import os
-import jwt
 import json
 import secrets
-
 from datetime import datetime
+import jwt
 from dotenv import load_dotenv
 
 import firebase_admin
@@ -389,26 +388,6 @@ def is_expired(event):
         print(f"Event {event.id} marked as expired.")
         return True  # Return True to indicate event is expired
     return False  # Event is still active
-
-@app.route("/state")
-def get_state():
-    """Endpoint to retrieve map state from Firestore."""
-    try:
-        state = {"events": []}
-        events = (
-            db.collection("events")
-            .where(filter=FieldFilter("status", "==", "active"))
-            .stream())
-        for event in events:
-            if is_expired(event):  # check if event recenlt expired
-                continue
-            event_obj = event.to_dict()
-            if event_obj.get("category") == option:
-                event_obj["eventId"] = event.id
-                state["events"].append(event_obj)
-        return jsonify({"status": 200, "state": state})
-    except Exception as e:
-        return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/add_to_calendar/<event_id>", methods=["POST"])
 def add_to_calendar(event_id):

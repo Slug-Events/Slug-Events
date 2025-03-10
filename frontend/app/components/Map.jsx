@@ -1,6 +1,7 @@
 "use client";
 
 import RsvpPanel from './RsvpPanel';
+import { Rectangle } from "@react-google-maps/api";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -1007,6 +1008,21 @@ export default function Map() {
               styles: isDarkMode ? darkModeMap : lightModeMap,
             }}
           >
+          <Rectangle
+            bounds={{
+              north: eventBounds.north,
+              south: eventBounds.south,
+              east: eventBounds.east,
+              west: eventBounds.west,
+            }}
+            options={{
+              fillColor: "transparent",
+              strokeColor: "red",
+              strokeOpacity: 0.8,
+              strokeWeight: 2,
+              clickable: false, // This ensures clicks pass through the rectangle
+            }}
+          />
             {markers.map((marker, index) => (
               <Marker
                 key={`marker-${marker.eventId || index}`}

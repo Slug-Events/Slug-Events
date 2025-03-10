@@ -1151,7 +1151,7 @@ export default function Map() {
                       setFormData({ ...formData, category: e.target.value })
                     }
                   >
-                    <option value="">All Categories</option>
+                    <option value="">Please Select</option>
                     <option value="general">General</option>
                     <option value="sports">Sports</option>
                     <option value="ucsc-club">UCSC Club</option>

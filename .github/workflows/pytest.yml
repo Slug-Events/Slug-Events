@@ -21,5 +21,7 @@ jobs:
         pip install -r requirements.txt
     - name: Running tests with pytest
       working-directory: backend
+      env:
+        FIREBASE_KEY: ${{ secrets.FIREBASE_KEY }}
       run: |
         pytest

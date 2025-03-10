@@ -2,14 +2,10 @@
 Class for Event object
 """
 from datetime import datetime
-from typing import Optional, Dict
+from typing import Optional
 from flask import request, jsonify
 
 from helpers import get_user_email, validate_event_data
-
-
-from helpers import validate_event_data
-from flask import jsonify
 
 class Event:
     """Class for Event object"""

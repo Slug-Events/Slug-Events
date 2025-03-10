@@ -1,37 +1,7 @@
-import pytest
+"""Pytest tests for basic Event class functionality"""
 from unittest.mock import MagicMock
-from datetime import datetime
+import pytest
 from event import Event
-from app import app
-
-@pytest.fixture
-def mock_db():
-    """Creates a mock Firestore database instance."""
-    return MagicMock()
-
-@pytest.fixture
-def sample_event(mock_db):
-    """Creates a sample Event object with test data."""
-    return Event(
-        title="Test Event",
-        description="This is a test event.",
-        start_time=datetime(2025, 3, 9, 12, 0),
-        end_time=datetime(2025, 3, 9, 14, 0),
-        location={"latitude": "37.7749", "longitude": "-122.4194"},
-        category="Social",
-        owner_email="test@example.com",
-        db=mock_db,
-        address="123 Test St",
-        capacity="100",
-        age_limit="18+",
-        image="test.jpg"
-    )
-
-@pytest.fixture
-def app_context():
-    """Provides an application context required for database operations."""
-    with app.app_context():
-        yield
 
 def test_event_to_dict(sample_event):
     """Ensure that the Event object is correctly converted to a dictionary."""
@@ -49,7 +19,7 @@ def test_event_to_dict(sample_event):
         "image": sample_event.image,
         "ownerEmail": sample_event.owner_email,
         "createdAt": sample_event.created_at,
-        "status": sample_event.status
+        "status": sample_event.status,
     }
     assert event_dict == expected_dict
 
@@ -68,7 +38,8 @@ def test_event_update(sample_event, mock_db):
     sample_event.update("event123")
     event_ref.set.assert_called_once()
 
-def test_event_deletion(sample_event, mock_db, app_context):
+@pytest.mark.usefixtures("app_context")
+def test_event_deletion(sample_event, mock_db):
     """Ensure that deleting an event removes it from the database and returns the correct response."""
     event_ref = mock_db.collection("events").document("event123")
     sample_event.event_id = "event123"
@@ -80,7 +51,9 @@ def test_event_deletion(sample_event, mock_db, app_context):
 def test_rsvp_addition(sample_event, mock_db):
     """Ensure that adding an RSVP correctly updates the database and RSVP is stored."""
     sample_event.event_id = "event123"
-    rsvp_collection = mock_db.collection("events").document("event123").collection("rsvps")
+    rsvp_collection = (
+        mock_db.collection("events").document("event123").collection("rsvps")
+    )
     rsvp_ref = rsvp_collection.document("user@example.com")
     sample_event.rsvp_add("user@example.com")
     rsvp_ref.set.assert_called_once()
@@ -90,7 +63,9 @@ def test_rsvp_addition(sample_event, mock_db):
 def test_rsvp_removal(sample_event, mock_db):
     """Ensure that removing an RSVP correctly updates the database."""
     sample_event.event_id = "event123"
-    rsvp_collection = mock_db.collection("events").document("event123").collection("rsvps")
+    rsvp_collection = (
+        mock_db.collection("events").document("event123").collection("rsvps")
+    )
     rsvp_ref = rsvp_collection.document("user@example.com")
     sample_event.rsvp_remove("user@example.com")
     rsvp_ref.delete.assert_called_once()
@@ -98,8 +73,13 @@ def test_rsvp_removal(sample_event, mock_db):
 def test_get_rsvps_list(sample_event, mock_db):
     """Ensure that retrieving RSVPs returns the correct list of user emails."""
     sample_event.event_id = "event123"
-    rsvp_collection = mock_db.collection("events").document("event123").collection("rsvps")
-    mock_snapshot = [MagicMock(id="user1@example.com"), MagicMock(id="user2@example.com")]
+    rsvp_collection = (
+        mock_db.collection("events").document("event123").collection("rsvps")
+    )
+    mock_snapshot = [
+        MagicMock(id="user1@example.com"),
+        MagicMock(id="user2@example.com"),
+    ]
     rsvp_collection.stream.return_value = mock_snapshot
     rsvps = sample_event.get_rsvps()
     assert rsvps == ["user1@example.com", "user2@example.com"]
@@ -115,5 +95,5 @@ def test_invalid_data_types(mock_db):
             location="Invalid Location",  # Invalid type (should be dict)
             category=None,  # Invalid type (should be string)
             owner_email=456,  # Invalid type (should be string)
-            db=mock_db
+            db=mock_db,
         )

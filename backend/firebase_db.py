@@ -1,10 +1,11 @@
+"""Module for getting a firebase database"""
 import os
 import json
 import firebase_admin
 from firebase_admin import credentials, firestore
-from helpers import validate_event_data
 
 def get_db():
+    """Retrieves firebase database from config set in env variables"""
     service_account_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"
     )

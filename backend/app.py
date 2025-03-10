@@ -5,15 +5,12 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 """
 
 import os
-import json
 import secrets
 from datetime import datetime
 
 import jwt
 from dotenv import load_dotenv
 
-import firebase_admin
-from firebase_admin import credentials, firestore
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
 from google.auth.transport.requests import Request

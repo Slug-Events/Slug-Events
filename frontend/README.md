@@ -14,23 +14,22 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Deploy env vars on Google Cloud
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+1. After new branch has been merged to main navigate to google cloud console
+2. Then go to the `Cloud Run` section
+3. Click on slug-events-next-app
+4. Click on edit and deploy new revision
+5. Click on `variables and secrets`
+6. Set the env variables shown below
+7. Click `Serve this revision immediately`
+8. Click deploy
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Environment variables
 
-## Learn More
+* `NEXTAUTH_SECRET` = input anything
 
-To learn more about Next.js, take a look at the following resources:
+### Secrets exposed as environment variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* `GOOGLE_CLIENT_ID` = latest version of `CLIENT_ID` secret
+* `GOOGLE_CLIENT_SECRET` = lastest version of `CLIENT_SECRET` secret

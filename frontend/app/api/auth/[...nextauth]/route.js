@@ -22,7 +22,7 @@ const handler = NextAuth({
       // Handle redirection after sign-out or other cases
       return url.startsWith(baseUrl) ? url : baseUrl;
     },
-    async session({ session, token, user }) {
+    async session({ session, token }) {
       // Attach additional properties to the session object
       session.user.id = token.sub;
       return session;

@@ -14,7 +14,7 @@ export default function HomePage() {
                 Slug Events
               </Link>
             </div>
-            
+
             {/* Login Button */}
             <div className="flex items-center">
               <LoginButton />

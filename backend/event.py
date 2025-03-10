@@ -1,6 +1,7 @@
 """
 Class for Event object
 """
+
 from datetime import datetime
 from typing import Optional
 from flask import request, jsonify
@@ -52,7 +53,7 @@ class Event:
         self.image = image
         self.owner_email = owner_email
         self.db = db
-        self.created_at = datetime.now()
+        self.created_at = datetime.now(timezone.utc)
         self.status = "active"
 
     def to_dict(self):

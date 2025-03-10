@@ -7,7 +7,6 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 import os
 import secrets
 from datetime import datetime
-
 import jwt
 from dotenv import load_dotenv
 
@@ -17,6 +16,7 @@ from google.auth.transport.requests import Request
 from google.oauth2 import id_token
 from google.oauth2.credentials import Credentials
 from google.cloud.firestore import DELETE_FIELD
+from google.cloud.firestore_v1.base_query import FieldFilter
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
@@ -77,6 +77,21 @@ def get_google_flow():
 if FRONTEND_URL[:4] != "https":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+
+def is_expired(event):
+    """Checks if an event is expired and updates Firestore if necessary."""
+    event_obj = event.to_dict()
+    current_time = int(datetime.now().timestamp())
+    end_time_obj = event_obj.get("endTime")
+    if not end_time_obj:
+        return False
+    end_time = int(end_time_obj.timestamp())
+    if end_time < current_time:
+        event_ref = db.collection("events").document(event.id)
+        event_ref.update({"status": "expired"})  # update Firestore
+        print(f"Event {event.id} marked as expired.")
+        return True  # return True to indicate event is expired
+    return False  # event is still active
 
 def create_calendar_event(event, credentials_dict):
     """Creates Google Calendar event from RSVP"""
@@ -166,7 +181,7 @@ def authorize():
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
 
-    # Store both user info and Google credentials in JWT token
+    # store both user info and Google credentials in JWT token
     jwt_token = jwt.encode(
         {
             "user": {
@@ -199,18 +214,21 @@ def logout():
 
 @app.route("/state")
 def get_state():
-    """Endpoint to retrieve map state from db"""
+    """Endpoint to retrieve map state from Firestore."""
     try:
         state = {"events": []}
-        events = db.collection("events").stream()
+        events = (
+            db.collection("events")
+            .where(filter=FieldFilter("status", "==", "active"))
+            .stream())
         for event in events:
+            if is_expired(event):  # check if event recently expired
+                continue
             event_obj = event.to_dict()
             event_obj["eventId"] = event.id
             state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
-
     except Exception as e:
-        print(e)
         return jsonify({"status": 500, "error": str(e)}), 500
 
 @app.route("/create_event", methods=["POST"])
@@ -315,8 +333,13 @@ def filter_events(option):
     try:
         print("FILTER OPTION:", option)
         state = {"events":[]}
-        events = db.collection("events").stream()
+        events = (
+            db.collection("events")
+            .where(filter=FieldFilter("status", "==", "active"))
+            .stream())
         for event in events:
+            if is_expired(event):  # skip expired events
+                continue
             event_obj = event.to_dict()
             if event_obj.get("category") == option:
                 event_obj["eventId"] = event.id
@@ -334,8 +357,13 @@ def filter_times(time):
         dt_object = datetime.strptime(time, "%Y-%m-%dT%H:%M")
         current_time = int(dt_object.timestamp())
         state = {"events":[]}
-        events = db.collection("events").stream()
+        events = (
+            db.collection("events")
+            .where(filter=FieldFilter("status", "==", "active"))
+            .stream())
         for event in events:
+            if is_expired(event):  # skip expired events
+                continue
             event_obj = event.to_dict()
             start_time_obj = event_obj.get("startTime")
             end_time_obj = event_obj.get("endTime")

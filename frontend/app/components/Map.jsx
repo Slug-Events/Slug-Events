@@ -15,7 +15,8 @@ import {
 const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
-const bounds = { north: 37.1, south: 36.8, east: -121.82, west: -122.16 };
+const bounds = { north: 37.19, south: 36.78, east: -121.63, west: -122.46 };
+const eventBounds = { north: 37.06, south: 36.78, east: -121.72, west: -122.34 };
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -100,6 +101,11 @@ const darkModeMap = [
   },
 ];
 
+const generateShareableLink = (eventId) => {
+  const baseUrl = window.location.origin;
+  return `${baseUrl}/event/${eventId}`;
+};
+
 export default function Map() {
   // relevant variables
   const [rsvps, setRsvps] = useState({});
@@ -117,10 +123,10 @@ export default function Map() {
     description: "",
     startTime: "",
     endTime: "",
-    category: "general",
+    category: "",
     address: "",
-    age_limit: "",
     capacity: "",
+    age_limit: "",
     image: ""
   });
   const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
@@ -448,6 +454,13 @@ export default function Map() {
     fetchRsvps();
   }, [selectedEvent]);
 
+  // converts the time to local time
+  const convertLocalToUTC = (localDateTime) => {
+    if (!localDateTime) return ""; // handle empty inputs
+    const date = new Date(localDateTime);  // parse input as local time
+    return date.toISOString(); // convert to UTC in ISO 8601 format
+  };
+
   // handles creating and event and sending to backend
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
@@ -471,11 +484,16 @@ export default function Map() {
           },
           body: JSON.stringify({
             ...formData,
+            startTime: convertLocalToUTC(formData.startTime), // convert to UTC
+            endTime: convertLocalToUTC(formData.endTime),     // convert to UTC
             location: {
               latitude: selectedLocation.lat,
               longitude: selectedLocation.lng,
             },
             host: user.email,
+            ...(formData.age_limit && formData.age_limit.trim() !== ''
+              ? { age_limit: formData.age_limit }
+              : {}),
           }),
         }
       );
@@ -532,6 +550,9 @@ export default function Map() {
             },
             host: user.email,
             eventId: selectedEventId,
+            ...(formData.age_limit && formData.age_limit.trim() !== ''
+              ? { age_limit: formData.age_limit }
+              : {}),
           }),
         }
       );
@@ -690,7 +711,7 @@ export default function Map() {
     }
   }
 
-  // signs user out and removes token
+  // signs user out and remove token
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
@@ -702,7 +723,24 @@ export default function Map() {
 
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
+
+    // define strict bounds to prevent clicks outside
+    if (
+      lat > eventBounds.north ||
+      lat < eventBounds.south ||
+      lng > eventBounds.east ||
+      lng < eventBounds.west
+    ) {
+      alert("You can't place an event outside the allowed area.");
+      return; // stop the function if the click is out of bounds
+    }
+
     updateFormLocation(lat, lng);
+
+    // center map on the clicked location
+    if (mapRef.current) {
+      mapRef.current.panTo({ lat, lng });
+    }
   };
 
   // updates current location
@@ -723,7 +761,16 @@ export default function Map() {
     setShowCreateForm(true);
     if (mapRef.current) {
       const center = mapRef.current.getCenter();
-      updateFormLocation(center.lat(), center.lng());
+      let lat = center.lat();
+      let lng = center.lng();
+      const buffer = 0.01;
+
+      if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
+      if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
+      if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
+      if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
+
+      updateFormLocation(lat, lng);
     }
   };
 
@@ -747,7 +794,7 @@ export default function Map() {
     }
   };
 
-  // retrieving the date/time
+  // getting the local date/time
   function getLocalDatetime() {
     const now = new Date();
     // adjust to local timezone by subtracting the offset
@@ -764,6 +811,7 @@ export default function Map() {
       reader.onerror = error => reject(error);
     });
   }
+
 
   return (
     // top of the site
@@ -974,14 +1022,35 @@ export default function Map() {
                 key={`marker-${marker.eventId || index}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 onClick={() => {
-                  setShowCreateForm(false);
-                  setShowEditForm(false);
-                  setShowRsvpList(false);
+                  setSelectedEvent(marker)
+                  if (mapRef.current) {
+                    const map = mapRef.current;
+                    const mapBounds = map.getBounds();
 
-                  setSelectedEvent(() => null);
-                  requestAnimationFrame(() => {
-                    setSelectedEvent(() => marker);
-                  });
+                    if (mapBounds) {
+                      const buffer = 0.07; // moves the map slightly inward
+
+                      let newLat = marker.lat;
+                      let newLng = marker.lng;
+
+                      // check if the marker is too close to any boundary and adjust
+                      if (marker.lat >= bounds.north - buffer) {
+                        newLat -= buffer;
+                      }
+                      if (marker.lat <= bounds.south + buffer) {
+                        newLat += buffer;
+                      }
+                      if (marker.lng >= bounds.east - buffer) {
+                        newLng -= buffer;
+                      }
+                      if (marker.lng <= bounds.west + buffer) {
+                        newLng += buffer;
+                      }
+
+                      // move the map to the adjusted position
+                      map.panTo({ lat: newLat, lng: newLng });
+                    }
+                  }
                 }}
               />
             ))}
@@ -1068,6 +1137,7 @@ export default function Map() {
                       setFormData({ ...formData, category: e.target.value })
                     }
                   >
+                    <option value="">All Categories</option>
                     <option value="general">General</option>
                     <option value="sports">Sports</option>
                     <option value="ucsc-club">UCSC Club</option>
@@ -1108,11 +1178,12 @@ export default function Map() {
                       }
                     />
                   </div>
+                  
                   <button
                     onClick={handleCreateEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-400 text-gray-700 cursor-not-allowed'
                       }`}
                     disabled={!isFormValid}
                   >
@@ -1247,8 +1318,8 @@ export default function Map() {
                   <button
                     onClick={handleEditEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-400 text-gray-700 cursor-not-allowed'
                       }`}
                     disabled={!isFormValid}
                   >
@@ -1285,17 +1356,31 @@ export default function Map() {
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
                         Address:
                       </span>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} flex-1`}>
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedEvent.address)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-xs ${isDarkMode ? 'text-blue-400' : 'text-blue-600'} flex-1 underline cursor-pointer`}
+                      >
                         {selectedEvent.address}
-                      </span>
+                      </a>
                     </div>
                     <div className="flex items-center">
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
                         Host:
                       </span>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} break-all`}>
+                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} break-all mr-2`}>
                         {selectedEvent.host}
                       </span>
+                      {selectedEvent.host !== user?.email && (
+                        <a
+                          href={`mailto:${selectedEvent.host}?subject=[Slug Events] Regarding ${selectedEvent.title} Event`}
+                          className={`text-xs font-medium px-2 py-1 rounded ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                            }`}
+                        >
+                          Contact Host
+                        </a>
+                      )}
                     </div>
                     <div className="flex items-center">
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
@@ -1370,19 +1455,19 @@ export default function Map() {
 
                     {/* RSVP Section */}
                     <div className="mt-4 space-y-2 border-t pt-4">
-                      <div className="flex justify-between items-center">
-                        <div className="space-x-2">
+                      <div className="flex flex-col space-y-2">
+                        <div className="flex justify-between items-center">
                           {rsvps[selectedEvent.eventId]?.includes(user?.email) ? (
                             <button
                               onClick={() => handleUnrsvp(selectedEvent.eventId)}
-                              className="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
+                              className="flex-1 mr-2 bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600 transition-colors"
                             >
                               Un-RSVP
                             </button>
                           ) : (
                             <button
                               onClick={() => handleRsvp(selectedEvent.eventId)}
-                              className="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
+                              className="flex-1 mr-2 bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600 transition-colors"
                             >
                               RSVP
                             </button>
@@ -1391,14 +1476,16 @@ export default function Map() {
                             onClick={() => {
                               setShowRsvpList(!showRsvpList);
                             }}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
+                            className="flex-1 bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600 transition-colors"
                           >
                             {showRsvpList ? "Hide RSVPs" : "View RSVPs"}
                           </button>
                         </div>
-                        <span className="text-sm text-gray-500">
-                          {rsvps[selectedEvent.eventId]?.length || 0} attending
-                        </span>
+                        <div className="text-center">
+                          <span className="text-sm text-gray-500">
+                            {rsvps[selectedEvent.eventId]?.length || 0} attending
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -1407,31 +1494,43 @@ export default function Map() {
                       <div className="flex flex-col space-y-2 mt-4 pt-4 border-t">
                         <button
                           onClick={() => {
-                            setFormData({
-                              title: selectedEvent.title,
-                              description: selectedEvent.description,
-                              startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
-                              endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
-                              capacity: selectedEvent.capacity || "Unlimited",
-                              age_limit: selectedEvent.age_limit || "None",
-                              image: selectedEvent.image,
-                              category: selectedEvent.category,
-                              address: selectedEvent.address,
-                            });
-                            handleEditButtonClick();
-                            setSelectedEventId(selectedEvent.eventId);
-                            setSelectedEvent(null);
+                            const shareableLink = generateShareableLink(selectedEvent.eventId);
+                            navigator.clipboard.writeText(shareableLink);
+                            alert("Event link copied to clipboard!");
                           }}
-                          className="bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                          className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
                         >
-                          Edit Event
+                          Share Event
                         </button>
-                        <button
-                          onClick={() => { handleDeleteEvent(); setSelectedEvent(null); }}
-                          className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
-                        >
-                          Delete Event
-                        </button>
+                        <div className="flex justify-between items-center">
+                          <button
+                            onClick={() => {
+                              setFormData({
+                                title: selectedEvent.title,
+                                description: selectedEvent.description,
+                                startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
+                                endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
+                                capacity: selectedEvent.capacity || "Unlimited",
+                                age_limit: selectedEvent.age_limit || "None",
+                                image: selectedEvent.image,
+                                category: selectedEvent.category,
+                                address: selectedEvent.address,
+                              });
+                              handleEditButtonClick();
+                              setSelectedEventId(selectedEvent.eventId);
+                              setSelectedEvent(null);
+                            }}
+                            className="flex-1 mr-2 bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                          >
+                            Edit Event
+                          </button>
+                          <button
+                            onClick={() => { handleDeleteEvent(); setSelectedEvent(null); }}
+                            className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700"
+                          >
+                            Delete Event
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

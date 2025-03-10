@@ -1170,8 +1170,8 @@ export default function Map() {
                   <button
                     onClick={handleCreateEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-400 text-gray-700 cursor-not-allowed'
                       }`}
                     disabled={!isFormValid}
                   >
@@ -1306,8 +1306,8 @@ export default function Map() {
                   <button
                     onClick={handleEditEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
-                        ? 'bg-green-600 text-white hover:bg-green-700'
-                        : 'bg-gray-400 text-gray-700 cursor-not-allowed'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-gray-400 text-gray-700 cursor-not-allowed'
                       }`}
                     disabled={!isFormValid}
                   >
@@ -1352,9 +1352,18 @@ export default function Map() {
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>
                         Host:
                       </span>
-                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} break-all`}>
+                      <span className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} break-all mr-2`}>
                         {selectedEvent.host}
                       </span>
+                      {selectedEvent.host !== user?.email && (
+                        <a
+                          href={`mailto:${selectedEvent.host}?subject=[Slug Events] Regarding ${selectedEvent.title} Event`}
+                          className={`text-xs font-medium px-2 py-1 rounded ${isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white'
+                            }`}
+                        >
+                          Contact Host
+                        </a>
+                      )}
                     </div>
                     <div className="flex items-center">
                       <span className={`text-xs font-medium ${isDarkMode ? 'text-gray-400' : 'text-gray-500'} w-20`}>

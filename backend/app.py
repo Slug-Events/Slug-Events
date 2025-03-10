@@ -103,10 +103,10 @@ def is_expired(event):
     end_time = int(end_time_obj.timestamp())
     if end_time < current_time:
         event_ref = db.collection("events").document(event.id)
-        event_ref.update({"status": "expired"})  # Update Firestore
+        event_ref.update({"status": "expired"})  # update Firestore
         print(f"Event {event.id} marked as expired.")
-        return True  # Return True to indicate event is expired
-    return False  # Event is still active
+        return True  # return True to indicate event is expired
+    return False  # event is still active
 
 def create_calendar_event(event, credentials_dict):
     """Creates Google Calendar event from RSVP"""
@@ -196,7 +196,7 @@ def authorize():
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
 
-    # Store both user info and Google credentials in JWT token
+    # store both user info and Google credentials in JWT token
     jwt_token = jwt.encode(
         {
             "user": {
@@ -237,7 +237,7 @@ def get_state():
             .where(filter=FieldFilter("status", "==", "active"))
             .stream())
         for event in events:
-            if is_expired(event):  # check if event recenlt expired
+            if is_expired(event):  # check if event recently expired
                 continue
             event_obj = event.to_dict()
             event_obj["eventId"] = event.id
@@ -353,7 +353,7 @@ def filter_events(option):
             .where(filter=FieldFilter("status", "==", "active"))
             .stream())
         for event in events:
-            if is_expired(event):  # Skip expired events
+            if is_expired(event):  # skip expired events
                 continue
             event_obj = event.to_dict()
             if event_obj.get("category") == option:
@@ -377,7 +377,7 @@ def filter_times(time):
             .where(filter=FieldFilter("status", "==", "active"))
             .stream())
         for event in events:
-            if is_expired(event):  # Skip expired events
+            if is_expired(event):  # skip expired events
                 continue
             event_obj = event.to_dict()
             start_time_obj = event_obj.get("startTime")

@@ -123,10 +123,10 @@ export default function Map() {
     description: "",
     startTime: "",
     endTime: "",
-    category: "general",
+    category: "",
     address: "",
-    age_limit: "",
     capacity: "",
+    age_limit: "",
     image: ""
   });
   const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
@@ -353,7 +353,7 @@ export default function Map() {
             description: event.description,
             startTime: event.startTime,
             endTime: event.endTime,
-            category: event.category,
+            category : event.category,
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
@@ -454,6 +454,13 @@ export default function Map() {
     fetchRsvps();
   }, [selectedEvent]);
 
+  // converts the time to local time
+  const convertLocalToUTC = (localDateTime) => {
+    if (!localDateTime) return ""; // handle empty inputs
+    const date = new Date(localDateTime);  // parse input as local time
+    return date.toISOString(); // convert to UTC in ISO 8601 format
+  };
+
   // handles creating and event and sending to backend
   const handleCreateEvent = async () => {
     if (!selectedLocation) {
@@ -477,6 +484,8 @@ export default function Map() {
           },
           body: JSON.stringify({
             ...formData,
+            startTime: convertLocalToUTC(formData.startTime), // Convert to UTC
+            endTime: convertLocalToUTC(formData.endTime),     // Convert to UTC
             location: {
               latitude: selectedLocation.lat,
               longitude: selectedLocation.lng,
@@ -785,7 +794,7 @@ export default function Map() {
     }
   };
 
-  // retrieving the date/time
+  // getting the local date/time
   function getLocalDatetime() {
     const now = new Date();
     // adjust to local timezone by subtracting the offset
@@ -802,6 +811,7 @@ export default function Map() {
       reader.onerror = error => reject(error);
     });
   }
+
 
   return (
     // top of the site
@@ -1127,6 +1137,7 @@ export default function Map() {
                       setFormData({ ...formData, category: e.target.value })
                     }
                   >
+                    <option value="">All Categories</option>
                     <option value="general">General</option>
                     <option value="sports">Sports</option>
                     <option value="ucsc-club">UCSC Club</option>

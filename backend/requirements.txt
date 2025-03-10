@@ -11,3 +11,4 @@ PyJWT==2.10.1
 python-dotenv==1.0.1
 firebase-admin==6.6.0
 gunicorn==23.0.0
+pytest==8.3.5

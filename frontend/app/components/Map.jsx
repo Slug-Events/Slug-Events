@@ -15,8 +15,8 @@ import {
 const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
-const bounds = {north: 37.19, south: 36.78, east: -121.63, west: -122.46};
-const eventBounds = {north: 37.06, south: 36.78, east: -121.72, west: -122.34};
+const bounds = { north: 37.19, south: 36.78, east: -121.63, west: -122.46 };
+const eventBounds = { north: 37.06, south: 36.78, east: -121.72, west: -122.34 };
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -353,7 +353,7 @@ export default function Map() {
             description: event.description,
             startTime: event.startTime,
             endTime: event.endTime,
-            category : event.category,
+            category: event.category,
             address: event.address,
             capacity: event.capacity,
             age_limit: event.age_limit,
@@ -484,15 +484,15 @@ export default function Map() {
           },
           body: JSON.stringify({
             ...formData,
-            startTime: convertLocalToUTC(formData.startTime), // Convert to UTC
-            endTime: convertLocalToUTC(formData.endTime),     // Convert to UTC
+            startTime: convertLocalToUTC(formData.startTime), // convert to UTC
+            endTime: convertLocalToUTC(formData.endTime),     // convert to UTC
             location: {
               latitude: selectedLocation.lat,
               longitude: selectedLocation.lng,
             },
             host: user.email,
-            ...(formData.age_limit && formData.age_limit.trim() !== '' 
-              ? { age_limit: formData.age_limit } 
+            ...(formData.age_limit && formData.age_limit.trim() !== ''
+              ? { age_limit: formData.age_limit }
               : {}),
           }),
         }
@@ -550,8 +550,8 @@ export default function Map() {
             },
             host: user.email,
             eventId: selectedEventId,
-            ...(formData.age_limit && formData.age_limit.trim() !== '' 
-              ? { age_limit: formData.age_limit } 
+            ...(formData.age_limit && formData.age_limit.trim() !== ''
+              ? { age_limit: formData.age_limit }
               : {}),
           }),
         }
@@ -720,24 +720,24 @@ export default function Map() {
   // sets the current location to where clicked
   const handleMapClick = async (e) => {
     if (!showCreateForm) return;
-  
+
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
-  
-    // Define strict bounds to prevent clicks outside
+
+    // define strict bounds to prevent clicks outside
     if (
-      lat > eventBounds.north || 
-      lat < eventBounds.south || 
-      lng > eventBounds.east || 
+      lat > eventBounds.north ||
+      lat < eventBounds.south ||
+      lng > eventBounds.east ||
       lng < eventBounds.west
     ) {
       alert("You can't place an event outside the allowed area.");
-      return; // Stop the function if the click is out of bounds
+      return; // stop the function if the click is out of bounds
     }
-  
+
     updateFormLocation(lat, lng);
-  
-    // Center map on the clicked location
+
+    // center map on the clicked location
     if (mapRef.current) {
       mapRef.current.panTo({ lat, lng });
     }
@@ -769,7 +769,7 @@ export default function Map() {
       if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
       if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
       if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
-  
+
       updateFormLocation(lat, lng);
     }
   };
@@ -1026,14 +1026,14 @@ export default function Map() {
                   if (mapRef.current) {
                     const map = mapRef.current;
                     const mapBounds = map.getBounds();
-            
+
                     if (mapBounds) {
-                      const buffer = 0.07; // Moves the map slightly inward
-                      
+                      const buffer = 0.07; // moves the map slightly inward
+
                       let newLat = marker.lat;
                       let newLng = marker.lng;
-            
-                      // Check if the marker is too close to any boundary and adjust
+
+                      // check if the marker is too close to any boundary and adjust
                       if (marker.lat >= bounds.north - buffer) {
                         newLat -= buffer;
                       }
@@ -1046,8 +1046,8 @@ export default function Map() {
                       if (marker.lng <= bounds.west + buffer) {
                         newLng += buffer;
                       }
-            
-                      // Move the map to the adjusted position
+
+                      // move the map to the adjusted position
                       map.panTo({ lat: newLat, lng: newLng });
                     }
                   }
@@ -1178,6 +1178,7 @@ export default function Map() {
                       }
                     />
                   </div>
+                  
                   <button
                     onClick={handleCreateEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid
@@ -1447,16 +1448,6 @@ export default function Map() {
                                 Add to Calendar
                               </button>
                             )}
-                            <button
-                              onClick={() => {
-                                const shareableLink = generateShareableLink(selectedEvent.eventId);
-                                navigator.clipboard.writeText(shareableLink);
-                                alert("Event link copied to clipboard!");
-                              }}
-                              className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
-                            >
-                              Share Event
-                            </button>
                           </div>
                         );
                       })()}
@@ -1503,31 +1494,43 @@ export default function Map() {
                       <div className="flex flex-col space-y-2 mt-4 pt-4 border-t">
                         <button
                           onClick={() => {
-                            setFormData({
-                              title: selectedEvent.title,
-                              description: selectedEvent.description,
-                              startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
-                              endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
-                              capacity: selectedEvent.capacity || "Unlimited",
-                              age_limit: selectedEvent.age_limit || "None",
-                              image: selectedEvent.image,
-                              category: selectedEvent.category,
-                              address: selectedEvent.address,
-                            });
-                            handleEditButtonClick();
-                            setSelectedEventId(selectedEvent.eventId);
-                            setSelectedEvent(null);
+                            const shareableLink = generateShareableLink(selectedEvent.eventId);
+                            navigator.clipboard.writeText(shareableLink);
+                            alert("Event link copied to clipboard!");
                           }}
-                          className="bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                          className="bg-gray-500 text-white px-3 py-1 rounded text-sm hover:bg-gray-600 transition-colors"
                         >
-                          Edit Event
+                          Share Event
                         </button>
-                        <button
-                          onClick={() => { handleDeleteEvent(); setSelectedEvent(null); }}
-                          className="bg-red-600 text-white py-2 rounded hover:bg-red-700"
-                        >
-                          Delete Event
-                        </button>
+                        <div className="flex justify-between items-center">
+                          <button
+                            onClick={() => {
+                              setFormData({
+                                title: selectedEvent.title,
+                                description: selectedEvent.description,
+                                startTime: new Date(selectedEvent.startTime).toISOString().slice(0, 16),
+                                endTime: new Date(selectedEvent.endTime).toISOString().slice(0, 16),
+                                capacity: selectedEvent.capacity || "Unlimited",
+                                age_limit: selectedEvent.age_limit || "None",
+                                image: selectedEvent.image,
+                                category: selectedEvent.category,
+                                address: selectedEvent.address,
+                              });
+                              handleEditButtonClick();
+                              setSelectedEventId(selectedEvent.eventId);
+                              setSelectedEvent(null);
+                            }}
+                            className="flex-1 mr-2 bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                          >
+                            Edit Event
+                          </button>
+                          <button
+                            onClick={() => { handleDeleteEvent(); setSelectedEvent(null); }}
+                            className="flex-1 bg-red-600 text-white py-2 rounded hover:bg-red-700"
+                          >
+                            Delete Event
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

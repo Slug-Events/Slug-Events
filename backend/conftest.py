@@ -1,6 +1,7 @@
-import pytest
+"""Global config for pytests to use. Defines mock db and a sample event class"""
 from unittest.mock import MagicMock
 from datetime import datetime
+import pytest
 from event import Event
 from app import app
 
@@ -10,8 +11,9 @@ def mock_db():
     return MagicMock()
 
 @pytest.fixture
-def sample_event(mock_db):
+def sample_event(request):
     """Creates a sample Event object with test data."""
+    mock_firebase_db = request.getfixturevalue("mock_db")
     return Event(
         title="Test Event",
         description="This is a test event.",
@@ -20,7 +22,7 @@ def sample_event(mock_db):
         location={"latitude": "37.7749", "longitude": "-122.4194"},
         category="Social",
         owner_email="test@example.com",
-        db=mock_db,
+        db=mock_firebase_db,
         address="123 Test St",
         capacity="100",
         age_limit="18+",

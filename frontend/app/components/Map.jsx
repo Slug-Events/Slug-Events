@@ -482,6 +482,9 @@ export default function Map() {
               longitude: selectedLocation.lng,
             },
             host: user.email,
+            ...(formData.age_limit && formData.age_limit.trim() !== '' 
+              ? { age_limit: formData.age_limit } 
+              : {}),
           }),
         }
       );
@@ -538,6 +541,9 @@ export default function Map() {
             },
             host: user.email,
             eventId: selectedEventId,
+            ...(formData.age_limit && formData.age_limit.trim() !== '' 
+              ? { age_limit: formData.age_limit } 
+              : {}),
           }),
         }
       );

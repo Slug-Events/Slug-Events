@@ -3,19 +3,43 @@
 @tailwind utilities;
 
 :root {
-  --background: #3e3939;
-  --foreground: #646363;
+  --background: #ffffff;
+  --foreground: #000000;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #646363;
-  }
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ffffff;
+  --infoWindowBackground: #394150;
 }
+
+/* for dark mode of InfoWindow */
+.gm-style .gm-style-iw-d::-webkit-scrollbar-track, 
+.gm-style .gm-style-iw-d::-webkit-scrollbar-track-piece,
+.gm-style .gm-style-iw-c,
+.gm-style .gm-style-iw-t::after,
+.gm-style .gm-style-iw-tc::after { 
+  background: var(--infoWindowBackground, white);
+}
+
 
 body {
   color: var(--foreground);
   background: var(--background);
   font-family: Arial, Helvetica, sans-serif;
+  transition: background 0.3s ease-in-out, color 0.3s ease-in-out;
+}
+
+h1, h2, h3, h4, h5, h6, p {
+  color: var(--foreground);
+}
+
+button {
+  background-color: var(--foreground);
+  color: var(--background);
+}
+
+button:hover {
+  background-color: #444444;
+  color: #ffffff;
 }

@@ -3,8 +3,9 @@
 export default function LoginButton() {
   const handleLogin = () => {
     const backendUrl = process.env.NEXT_PUBLIC_LOGIN_URL;
+    console.log(backendUrl)
     if (!backendUrl) {
-      console.error("Environment variable REACT_APP_LOGIN_URL is not defined.");
+      console.error("Environment variable NEXT_PUBLIC_LOGIN_URL is not defined.");
       return;
     }
     const nextUrl = `${window.location.origin}/map`;

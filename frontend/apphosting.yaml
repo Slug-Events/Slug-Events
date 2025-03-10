@@ -40,8 +40,8 @@ env:
       - RUNTIME
 
 # Secrets exposed as environment variables
-  - variable: NEXT_PUBLIC_GOOGLE_MAPS_AF
-    secret: NEXT_PUBLIC_GOOGLE_MAPS_AF
+  - variable: NEXT_PUBLIC_GOOGLE_MAPS_API
+    secret: NEXT_PUBLIC_GOOGLE_MAPS_API
     availability:
       - RUNTIME
 

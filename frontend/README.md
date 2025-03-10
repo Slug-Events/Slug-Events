@@ -13,17 +13,22 @@ Then, run the development server:
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the login page for the site.
+## Deploy env vars on Google Cloud
 
-The main content can be viewed at [http://localhost:3000/map](http://localhost:3000/map) after signing in.
+1. After new branch has been merged to main navigate to google cloud console
+2. Then go to the `Cloud Run` section
+3. Click on slug-events-next-app
+4. Click on edit and deploy new revision
+5. Click on `variables and secrets`
+6. Set the env variables shown below
+7. Click `Serve this revision immediately`
+8. Click deploy
 
-You can start editing the page by modifying `app/page.js`, and mainly `Map.jsx`. The page auto-updates as you edit the file.
+### Environment variables
 
-## Learn More
+* `NEXTAUTH_SECRET` = input anything
 
-To learn more about Next.js, take a look at the following resources:
+### Secrets exposed as environment variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js)
+* `GOOGLE_CLIENT_ID` = latest version of `CLIENT_ID` secret
+* `GOOGLE_CLIENT_SECRET` = lastest version of `CLIENT_SECRET` secret

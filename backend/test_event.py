@@ -1,12 +1,14 @@
 """Pytest tests for basic Event class functionality"""
-from unittest.mock import MagicMock
+
+from unittest.mock import MagicMock, ANY
 import pytest
 from event import Event
+
 
 def test_event_to_dict(sample_event):
     """Ensure that the Event object is correctly converted to a dictionary."""
     event_dict = sample_event.to_dict()
-    expected_dict = {
+    expected_data = {
         "title": sample_event.title,
         "description": sample_event.description,
         "startTime": sample_event.start_time,
@@ -21,54 +23,83 @@ def test_event_to_dict(sample_event):
         "createdAt": sample_event.created_at,
         "status": sample_event.status,
     }
-    assert event_dict == expected_dict
+    assert event_dict == expected_data
+
 
 def test_event_creation(sample_event, mock_db):
-    """Ensure that an event is successfully added to the database and assigned an ID."""
+    """Ensure that an event is successfully added to the database and assigned an ID with correct data."""
     event_ref = MagicMock()
     events_collection = mock_db.collection("events")
     events_collection.document.return_value = event_ref
+
     sample_event.create()
+
     event_ref.set.assert_called_once()
     assert sample_event.event_id is not None
 
+    expected_data = sample_event.to_dict()
+    event_ref.set.assert_called_with(expected_data)
+
+
 def test_event_update(sample_event, mock_db):
-    """Ensure that updating an event modifies the database entry correctly."""
+    """Ensure that updating an event modifies the database entry correctly with accurate data."""
     event_ref = mock_db.collection("events").document("event123")
+    sample_event.event_id = "event123"
+
+    # Modify event fields
+    sample_event.title = "Updated Title"
+    sample_event.capacity = "200"
+    sample_event.status = "updated"
+
     sample_event.update("event123")
-    event_ref.set.assert_called_once()
+
+    expected_data = sample_event.to_dict()
+    event_ref.set.assert_called_once_with(expected_data, merge=True)
+
 
 @pytest.mark.usefixtures("app_context")
 def test_event_deletion(sample_event, mock_db):
-    """Ensure that deleting an event removes it from the database and returns the correct response."""
+    """Ensure that deleting an event removes it from the database and verifies removal."""
     event_ref = mock_db.collection("events").document("event123")
     sample_event.event_id = "event123"
+
     response, status_code = sample_event.delete()
+
     event_ref.delete.assert_called_once()
     assert status_code == 200
     assert response.json == {"message": "Event deleted successfully"}
 
+
 def test_rsvp_addition(sample_event, mock_db):
-    """Ensure that adding an RSVP correctly updates the database and RSVP is stored."""
+    """Ensure that adding an RSVP correctly updates the database and verifies stored values."""
     sample_event.event_id = "event123"
     rsvp_collection = (
         mock_db.collection("events").document("event123").collection("rsvps")
     )
     rsvp_ref = rsvp_collection.document("user@example.com")
+
     sample_event.rsvp_add("user@example.com")
-    rsvp_ref.set.assert_called_once()
-    assert rsvp_ref.set.call_args[0][0]["email"] == "user@example.com"
-    assert rsvp_ref.set.call_args[0][0]["status"] == "confirmed"
+
+    expected_data = {
+        "email": "user@example.com",
+        "status": "confirmed",
+        "timestamp": ANY,  # Ignore timestamp since it's dynamically generated
+    }
+    rsvp_ref.set.assert_called_once_with(expected_data)
+
 
 def test_rsvp_removal(sample_event, mock_db):
-    """Ensure that removing an RSVP correctly updates the database."""
+    """Ensure that removing an RSVP correctly updates the database and verifies removal."""
     sample_event.event_id = "event123"
     rsvp_collection = (
         mock_db.collection("events").document("event123").collection("rsvps")
     )
     rsvp_ref = rsvp_collection.document("user@example.com")
+
     sample_event.rsvp_remove("user@example.com")
+
     rsvp_ref.delete.assert_called_once()
+
 
 def test_get_rsvps_list(sample_event, mock_db):
     """Ensure that retrieving RSVPs returns the correct list of user emails."""
@@ -76,13 +107,31 @@ def test_get_rsvps_list(sample_event, mock_db):
     rsvp_collection = (
         mock_db.collection("events").document("event123").collection("rsvps")
     )
+
+    # Mock Firestore's stream() to return fake RSVP documents
     mock_snapshot = [
         MagicMock(id="user1@example.com"),
         MagicMock(id="user2@example.com"),
     ]
     rsvp_collection.stream.return_value = mock_snapshot
+
     rsvps = sample_event.get_rsvps()
+
     assert rsvps == ["user1@example.com", "user2@example.com"]
+
+
+def test_event_fetch_from_db(sample_event, mock_db):
+    """Ensure fetching an event from the database retrieves all correct values."""
+    event_ref = mock_db.collection("events").document("event123")
+    mock_db.collection("events").document(
+        "event123"
+    ).get.return_value.to_dict.return_value = sample_event.to_dict()
+
+    fetched_event_data = event_ref.get().to_dict()
+
+    expected_data = sample_event.to_dict()
+    assert fetched_event_data == expected_data
+
 
 def test_invalid_data_types(mock_db):
     """Ensure that Event handles incorrect data types properly."""

@@ -2,10 +2,9 @@
 Class for Event object
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from flask import request, jsonify
-
 from helpers import get_user_email, validate_event_data
 
 class Event:

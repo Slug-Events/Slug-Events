@@ -5,14 +5,11 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 """
 
 import os
-import json
 import secrets
 from datetime import datetime
 import jwt
 from dotenv import load_dotenv
 
-import firebase_admin
-from firebase_admin import credentials, firestore
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
 from google.auth.transport.requests import Request
@@ -24,6 +21,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 from event import Event
+from firebase_db import get_db
 from helpers import get_user_email, get_user_credentials, get_id
 
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
@@ -51,21 +49,8 @@ app.config.update(
 )
 
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
-service_account_path = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), "slug-events-firebase-key.json"
-)
 
-if os.path.exists(service_account_path):
-    cred = credentials.Certificate(service_account_path)
-    print("Using service account key file.")
-else:
-    firebase_key = os.getenv("FIREBASE_KEY")
-    assert firebase_key
-    cred = credentials.Certificate(json.loads(firebase_key))
-    print("Using Google Cloud default credentials.")
-
-firebase_admin.initialize_app(cred)
-db = firestore.client()
+db = get_db()
 
 def get_google_flow():
     """Gets google login flow using env variables"""

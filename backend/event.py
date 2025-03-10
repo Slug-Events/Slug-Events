@@ -1,12 +1,11 @@
 """
 Class for Event object
 """
+
 from datetime import datetime, timezone
-from typing import Optional, Dict
+from typing import Optional
 from flask import request, jsonify
-
 from helpers import get_user_email, validate_event_data
-
 
 class Event:
     """Class for Event object"""
@@ -17,16 +16,29 @@ class Event:
         description: str,
         start_time: datetime,
         end_time: datetime,
-        location: Dict[str,str],
+        location: dict,
         category: str,
         owner_email: str,
         db,
-        address: str="",
+        address: str = "",
         capacity: Optional[str] = None,
         age_limit: Optional[str] = None,
         image: Optional[str] = None,
         event_id: Optional[str] = None,
     ) -> None:
+        # Added type validation inside event class
+        event_data = {
+            "title": title,
+            "description": description,
+            "startTime": start_time.isoformat() if isinstance(start_time, datetime) else start_time,
+            "endTime": end_time.isoformat() if isinstance(end_time, datetime) else end_time,
+            "location": location,
+        }
+
+        validation_error = validate_event_data(event_data)
+        if validation_error:
+            raise ValueError(validation_error[0].json)
+
         self.event_id = event_id
         self.title = title
         self.description = description

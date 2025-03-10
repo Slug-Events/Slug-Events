@@ -1024,10 +1024,10 @@ export default function Map() {
               options={{
                 fillColor: "transparent",
                 strokeColor: "red",
-                strokeOpacity: 0.9, // Make it slightly more visible
-                strokeWeight: 4, // Increase thickness
-                strokeLinecap: "round", // Round edges of the border
-                clickable: false, // Allow clicks to pass through
+                strokeOpacity: 0.7, // make it slightly more visible
+                strokeWeight: 13, // increase thickness
+                strokeLinecap: "round", // round edges of the border
+                clickable: false, // allow clicks to pass through
               }}
             />
 
@@ -1046,7 +1046,6 @@ export default function Map() {
                     setSelectedEvent(() => marker);
                   });
 
-                  setSelectedEvent(marker)
                   if (mapRef.current) {
                     const map = mapRef.current;
                     const mapBounds = map.getBounds();

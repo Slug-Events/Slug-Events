@@ -1015,29 +1015,38 @@ export default function Map() {
               styles: isDarkMode ? darkModeMap : lightModeMap,
             }}
           >
-          <Rectangle
-            bounds={{
-              north: eventBounds.north,
-              south: eventBounds.south,
-              east: eventBounds.east,
-              west: eventBounds.west,
-            }}
-            options={{
-              fillColor: "transparent",
-              strokeColor: "red",
-              strokeOpacity: 0.9, // Make it slightly more visible
-              strokeWeight: 4, // Increase thickness
-              strokeLinecap: "round", // Round edges of the border
-              clickable: false, // Allow clicks to pass through
-            }}
-          />
+            <Rectangle
+              bounds={{
+                north: eventBounds.north,
+                south: eventBounds.south,
+                east: eventBounds.east,
+                west: eventBounds.west,
+              }}
+              options={{
+                fillColor: "transparent",
+                strokeColor: "red",
+                strokeOpacity: 0.7, // make it slightly more visible
+                strokeWeight: 13, // increase thickness
+                strokeLinecap: "round", // round edges of the border
+                clickable: false, // allow clicks to pass through
+              }}
+            />
 
             {markers.map((marker, index) => (
               <Marker
                 key={`marker-${marker.eventId || index}`}
                 position={{ lat: marker.lat, lng: marker.lng }}
                 onClick={() => {
-                  setSelectedEvent(marker)
+                  // ensuring events dont freeze when opening a Google Maps location
+                  setShowCreateForm(false);
+                  setShowEditForm(false);
+                  setShowRsvpList(false);
+
+                  setSelectedEvent(() => null);
+                  requestAnimationFrame(() => {
+                    setSelectedEvent(() => marker);
+                  });
+
                   if (mapRef.current) {
                     const map = mapRef.current;
                     const mapBounds = map.getBounds();
@@ -1193,7 +1202,7 @@ export default function Map() {
                       }
                     />
                   </div>
-                  
+
                   <button
                     onClick={handleCreateEvent}
                     className={`w-full py-2 rounded mt-2 ${isFormValid

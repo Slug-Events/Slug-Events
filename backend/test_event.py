@@ -46,7 +46,7 @@ def test_event_update(sample_event, mock_db):
     event_ref = mock_db.collection("events").document("event123")
     sample_event.event_id = "event123"
 
-    # Modify event fields
+    # modify event fields
     sample_event.title = "Updated Title"
     sample_event.capacity = "200"
     sample_event.status = "updated"
@@ -83,7 +83,7 @@ def test_rsvp_addition(sample_event, mock_db):
     expected_data = {
         "email": "user@example.com",
         "status": "confirmed",
-        "timestamp": ANY,  # Ignore timestamp since it's dynamically generated
+        "timestamp": ANY,  # ignore timestamp since it's dynamically generated
     }
     rsvp_ref.set.assert_called_once_with(expected_data)
 
@@ -108,7 +108,7 @@ def test_get_rsvps_list(sample_event, mock_db):
         mock_db.collection("events").document("event123").collection("rsvps")
     )
 
-    # Mock Firestore's stream() to return fake RSVP documents
+    # mock Firestore's stream() to return fake RSVP documents
     mock_snapshot = [
         MagicMock(id="user1@example.com"),
         MagicMock(id="user2@example.com"),
@@ -137,12 +137,12 @@ def test_invalid_data_types(mock_db):
     """Ensure that Event handles incorrect data types properly."""
     with pytest.raises(TypeError):
         Event(
-            title=123,  # Invalid type (should be string)
-            description=["Invalid", "Description"],  # Invalid type (should be string)
-            start_time="2025-03-09T12:00:00",  # Invalid type (should be datetime)
-            end_time=1612137600,  # Invalid type (should be datetime)
-            location="Invalid Location",  # Invalid type (should be dict)
-            category=None,  # Invalid type (should be string)
-            owner_email=456,  # Invalid type (should be string)
+            title=123,  # invalid type (should be string)
+            description=["Invalid", "Description"],  # invalid type (should be string)
+            start_time="2025-03-09T12:00:00",  # invalid type (should be datetime)
+            end_time=1612137600,  # invalid type (should be datetime)
+            location="Invalid Location",  # invalid type (should be dict)
+            category=None,  # invalid type (should be string)
+            owner_email=456,  # invalid type (should be string)
             db=mock_db,
         )

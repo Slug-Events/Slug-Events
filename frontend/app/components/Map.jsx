@@ -116,6 +116,7 @@ export default function Map() {
   const [selectedLocation, setSelectedLocation] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -718,15 +719,23 @@ export default function Map() {
     localStorage.removeItem("token");
     router.push("/");
   };
+  // Detect when dragging starts
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
 
+  // Detect when dragging stops
+  const handleDragEnd = () => {
+    setIsDragging(false);
+  };
   // sets the current location to where clicked
   const handleMapClick = async (e) => {
-    if (!showCreateForm) return;
-
+    if (isDragging) return; // Ignore clicks while dragging
+  
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
-
-    // define strict bounds to prevent clicks outside
+  
+    // Prevent clicks outside event bounds
     if (
       lat > eventBounds.north ||
       lat < eventBounds.south ||
@@ -734,16 +743,25 @@ export default function Map() {
       lng < eventBounds.west
     ) {
       alert("You can't place an event outside the allowed area.");
-      return; // stop the function if the click is out of bounds
+      return;
     }
-
+  
+    // If the form is already open, update its location
+    if (showCreateForm) {
+      updateFormLocation(lat, lng);
+      return;
+    }
+  
+    // Otherwise, open the Create Event InfoWindow
     updateFormLocation(lat, lng);
-
-    // center map on the clicked location
+    setShowCreateForm(true);
+  
+    // Center map on the clicked location
     if (mapRef.current) {
       mapRef.current.panTo({ lat, lng });
     }
   };
+  
 
   // updates current location
   const updateFormLocation = (lat, lng) => {
@@ -788,13 +806,21 @@ export default function Map() {
     if (autocompleteRef.current) {
       const place = autocompleteRef.current.getPlace();
       if (place?.geometry?.location) {
-        updateFormLocation(
-          place.geometry.location.lat(),
-          place.geometry.location.lng()
-        );
+        const lat = place.geometry.location.lat();
+        const lng = place.geometry.location.lng();
+        
+        // Keep the Create Event InfoWindow open and update location
+        updateFormLocation(lat, lng);
+        setShowCreateForm(true); // Ensure the form stays open
+  
+        // Move the map to the new location
+        if (mapRef.current) {
+          mapRef.current.panTo({ lat, lng });
+        }
       }
     }
   };
+  
 
   // getting the local date/time
   function getLocalDatetime() {
@@ -1005,6 +1031,8 @@ export default function Map() {
             center={center}
             zoom={13}
             onClick={handleMapClick}
+            onDragStart={handleDragStart} // Detect when dragging starts
+            onDragEnd={handleDragEnd} // Detect when dragging stops
             onLoad={(map) => {
               mapRef.current = map;
               if (isDarkMode) {

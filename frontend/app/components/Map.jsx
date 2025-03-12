@@ -741,7 +741,7 @@ export default function Map() {
       lng > eventBounds.east ||
       lng < eventBounds.west
     ) {
-      alert("You can't place an event outside the allowed area.");
+      alert("You can't place an event outside the allowed area.\nPlease create an event closer to Santa Cruz.");
       return; // stop the function if the click is out of bounds
     }
 

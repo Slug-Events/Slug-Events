@@ -129,7 +129,11 @@ export default function Map() {
   });
   const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
   const areRequiredFieldsFilled = () => {
-    return requiredFields.every(field => formData[field] && formData[field].trim() !== '');
+    const startTime = new Date(formData.startTime);
+    const endTime = new Date(formData.endTime);
+    const currentTime = new Date();
+    
+    return requiredFields.every(field => formData[field] && formData[field].trim() !== '' && startTime >= currentTime && endTime > startTime);
   };
   const [isFormValid, setIsFormValid] = useState(false);
   useEffect(() => {

@@ -719,18 +719,18 @@ export default function Map() {
     localStorage.removeItem("token");
     router.push("/");
   };
-  // Detect when dragging starts
+  
   const handleDragStart = () => {
     setIsDragging(true);
   };
 
-  // Detect when dragging stops
   const handleDragEnd = () => {
     setIsDragging(false);
   };
+
   // sets the current location to where clicked
   const handleMapClick = async (e) => {
-    if (isDragging) return; // Ignore clicks while dragging
+    if (isDragging) return;
   
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
@@ -746,17 +746,16 @@ export default function Map() {
       return;
     }
   
-    // If a place is clicked, ignore it
     if (e.placeId) {
       return;
     }
   
-    // Ensure any existing form is reset before opening a new one
+    // Ensure any existing form is reset
     setShowCreateForm(false);
     setTimeout(() => {
       setShowCreateForm(true);
       updateFormLocation(lat, lng);
-    }, 100); // Small delay to force state update
+    }, 100);
   
     // Center map on the clicked location
     if (mapRef.current) {
@@ -767,7 +766,11 @@ export default function Map() {
   // updates current location
   const updateFormLocation = (lat, lng) => {
     setSelectedLocation({ lat, lng });
-
+    setFormData((prev) => ({
+      ...prev,
+      address: "",
+    }));
+  
     geocoder.current.geocode({ location: { lat, lng } }, (results, status) => {
       if (status === "OK" && results[0]) {
         setFormData((prev) => ({
@@ -776,12 +779,18 @@ export default function Map() {
         }));
       }
     });
+  
+    // Ensure the Autocomplete field gets reset
+    if (autocompleteRef.current) {
+      autocompleteRef.current.value = "";
+    }
   };
+  
 
   const handleCreateButtonClick = () => {
     setShowCreateForm(false); // Close any open form first
     setTimeout(() => {
-      setShowCreateForm(true); // Open the form after resetting
+      setShowCreateForm(true);
       if (mapRef.current) {
         const center = mapRef.current.getCenter();
         let lat = center.lat();
@@ -795,7 +804,7 @@ export default function Map() {
   
         updateFormLocation(lat, lng);
       }
-    }, 100); // Small delay to force state update
+    }, 100);
   };
 
   const handleEditButtonClick = () => {
@@ -813,11 +822,9 @@ export default function Map() {
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
         
-        // Keep the Create Event InfoWindow open and update location
         updateFormLocation(lat, lng);
-        setShowCreateForm(true); // Ensure the form stays open
+        setShowCreateForm(true);
   
-        // Move the map to the new location
         if (mapRef.current) {
           mapRef.current.panTo({ lat, lng });
         }

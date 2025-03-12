@@ -1,7 +1,7 @@
 "use client";
 
 import RsvpPanel from './RsvpPanel';
-import { Rectangle } from "@react-google-maps/api";
+import { Polyline } from "@react-google-maps/api";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -19,6 +19,18 @@ const center = { lat: 36.9741, lng: -122.0308 };
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-398513784123.us-west1.run.app"
 const bounds = { north: 37.19, south: 36.78, east: -121.63, west: -122.46 };
 const eventBounds = { north: 37.06, south: 36.78, east: -121.72, west: -122.34 };
+
+const LinePath = [
+  { lat: eventBounds.north, lng: -122.253512 }, // Top-left
+  { lat: eventBounds.north, lng: eventBounds.east }, // Top-right
+  { lat: eventBounds.south, lng: eventBounds.east }  // Bottom-right
+];
+
+const solidTransparentLineStyle = {
+  strokeColor: "#0000ff",
+  strokeOpacity: 0.3,
+  strokeWeight: 5,
+};
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -742,7 +754,8 @@ export default function Map() {
       lng > eventBounds.east ||
       lng < eventBounds.west
     ) {
-      alert("You can't place an event outside the allowed area.");
+
+      alert("You can't place an event outside the allowed area.\nPlease create an event closer to Santa Cruz.");
       return;
     }
   
@@ -1058,22 +1071,7 @@ export default function Map() {
               styles: isDarkMode ? darkModeMap : lightModeMap,
             }}
           >
-            <Rectangle
-              bounds={{
-                north: eventBounds.north,
-                south: eventBounds.south,
-                east: eventBounds.east,
-                west: eventBounds.west,
-              }}
-              options={{
-                fillColor: "transparent",
-                strokeColor: "red",
-                strokeOpacity: 0.7, // make it slightly more visible
-                strokeWeight: 13, // increase thickness
-                strokeLinecap: "round", // round edges of the border
-                clickable: false, // allow clicks to pass through
-              }}
-            />
+            <Polyline path={LinePath} options={solidTransparentLineStyle} />
 
             {markers.map((marker, index) => (
               <Marker

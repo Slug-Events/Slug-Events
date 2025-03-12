@@ -746,6 +746,11 @@ export default function Map() {
       return;
     }
   
+    // If a place is clicked (e.g., a business or landmark), do nothing
+    if (e.placeId) {
+      return;
+    }
+  
     // If the form is already open, update its location
     if (showCreateForm) {
       updateFormLocation(lat, lng);
@@ -761,6 +766,8 @@ export default function Map() {
       mapRef.current.panTo({ lat, lng });
     }
   };
+  
+
   
 
   // updates current location

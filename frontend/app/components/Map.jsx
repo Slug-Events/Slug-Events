@@ -20,12 +20,12 @@ const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-3
 const bounds = { north: 37.19, south: 36.78, east: -121.63, west: -122.46 };
 const eventBounds = { north: 37.06, south: 36.78, east: -121.72, west: -122.34 };
 
+// creating the boundary line
 const LinePath = [
-  { lat: eventBounds.north, lng: -122.253512 }, // Top-left
-  { lat: eventBounds.north, lng: eventBounds.east }, // Top-right
-  { lat: eventBounds.south, lng: eventBounds.east }  // Bottom-right
+  { lat: eventBounds.north, lng: -122.253512 }, // top-left
+  { lat: eventBounds.north, lng: eventBounds.east }, // top-right
+  { lat: eventBounds.south, lng: eventBounds.east }  // bottom-right
 ];
-
 const solidTransparentLineStyle = {
   strokeColor: "#0000ff",
   strokeOpacity: 0.3,
@@ -141,11 +141,12 @@ export default function Map() {
     image: ""
   });
   const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
+  // checking the event creation fields
   const areRequiredFieldsFilled = () => {
     const startTime = new Date(formData.startTime);
     const endTime = new Date(formData.endTime);
     const currentTime = new Date();
-    
+
     return requiredFields.every(field => formData[field] && formData[field].trim() !== '' && startTime >= currentTime && endTime > startTime);
   };
   const [isFormValid, setIsFormValid] = useState(false);
@@ -726,12 +727,12 @@ export default function Map() {
     }
   }
 
-  // signs user out and remove token
+  // signs user out and removes token
   const handleSignOut = () => {
     localStorage.removeItem("token");
     router.push("/");
   };
-  
+
   const handleDragStart = () => {
     setIsDragging(true);
   };
@@ -743,11 +744,11 @@ export default function Map() {
   // sets the current location to where clicked
   const handleMapClick = async (e) => {
     if (isDragging) return;
-  
+
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
-  
-    // Prevent clicks outside event bounds
+
+    // prevent clicks outside event bounds
     if (
       lat > eventBounds.north ||
       lat < eventBounds.south ||
@@ -758,24 +759,24 @@ export default function Map() {
       alert("You can't place an event outside the allowed area.\nPlease create an event closer to Santa Cruz.");
       return;
     }
-  
+
     if (e.placeId) {
       return;
     }
-  
-    // Ensure any existing form is reset
+
+    // ensure any existing form is reset
     setShowCreateForm(false);
     setTimeout(() => {
       setShowCreateForm(true);
       updateFormLocation(lat, lng);
     }, 100);
-  
-    // Center map on the clicked location
+
+    // center map on the clicked location
     if (mapRef.current) {
       mapRef.current.panTo({ lat, lng });
     }
   };
-  
+
   // updates current location
   const updateFormLocation = (lat, lng) => {
     setSelectedLocation({ lat, lng });
@@ -783,7 +784,7 @@ export default function Map() {
       ...prev,
       address: "",
     }));
-  
+
     geocoder.current.geocode({ location: { lat, lng } }, (results, status) => {
       if (status === "OK" && results[0]) {
         setFormData((prev) => ({
@@ -792,16 +793,16 @@ export default function Map() {
         }));
       }
     });
-  
-    // Ensure the Autocomplete field gets reset
+
+    // ensure the Autocomplete field gets reset
     if (autocompleteRef.current) {
       autocompleteRef.current.value = "";
     }
   };
-  
+
 
   const handleCreateButtonClick = () => {
-    setShowCreateForm(false); // Close any open form first
+    setShowCreateForm(false); // close any open form first
     setTimeout(() => {
       setShowCreateForm(true);
       if (mapRef.current) {
@@ -809,12 +810,12 @@ export default function Map() {
         let lat = center.lat();
         let lng = center.lng();
         const buffer = 0.01;
-  
+
         if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
         if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
         if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
         if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
-  
+
         updateFormLocation(lat, lng);
       }
     }, 100);
@@ -834,17 +835,17 @@ export default function Map() {
       if (place?.geometry?.location) {
         const lat = place.geometry.location.lat();
         const lng = place.geometry.location.lng();
-        
+
         updateFormLocation(lat, lng);
         setShowCreateForm(true);
-  
+
         if (mapRef.current) {
           mapRef.current.panTo({ lat, lng });
         }
       }
     }
   };
-  
+
 
   // getting the local date/time
   function getLocalDatetime() {
@@ -1055,8 +1056,8 @@ export default function Map() {
             center={center}
             zoom={13}
             onClick={handleMapClick}
-            onDragStart={handleDragStart} // Detect when dragging starts
-            onDragEnd={handleDragEnd} // Detect when dragging stops
+            onDragStart={handleDragStart} // detect when dragging starts
+            onDragEnd={handleDragEnd} // detect when dragging stops
             onLoad={(map) => {
               mapRef.current = map;
               if (isDarkMode) {
@@ -1236,7 +1237,6 @@ export default function Map() {
                         }
                         else {
                           const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                          // console.log("Uploaded image in base64: ", image_base64String);
                           setFormData({ ...formData, image: image_base64String });
                         }
                       }
@@ -1372,7 +1372,6 @@ export default function Map() {
                         }
                         else {
                           const image_base64String = await encodeImageToBase64(e.target.files[0]);
-                          // console.log("Uploaded image in base64: ", image_base64String);
                           setFormData({ ...formData, image: image_base64String });
                         }
                       }

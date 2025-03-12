@@ -746,20 +746,17 @@ export default function Map() {
       return;
     }
   
-    // If a place is clicked (e.g., a business or landmark), do nothing
+    // If a place is clicked, ignore it
     if (e.placeId) {
       return;
     }
   
-    // If the form is already open, update its location
-    if (showCreateForm) {
+    // Ensure any existing form is reset before opening a new one
+    setShowCreateForm(false);
+    setTimeout(() => {
+      setShowCreateForm(true);
       updateFormLocation(lat, lng);
-      return;
-    }
-  
-    // Otherwise, open the Create Event InfoWindow
-    updateFormLocation(lat, lng);
-    setShowCreateForm(true);
+    }, 100); // Small delay to force state update
   
     // Center map on the clicked location
     if (mapRef.current) {
@@ -767,9 +764,6 @@ export default function Map() {
     }
   };
   
-
-  
-
   // updates current location
   const updateFormLocation = (lat, lng) => {
     setSelectedLocation({ lat, lng });
@@ -785,20 +779,23 @@ export default function Map() {
   };
 
   const handleCreateButtonClick = () => {
-    setShowCreateForm(true);
-    if (mapRef.current) {
-      const center = mapRef.current.getCenter();
-      let lat = center.lat();
-      let lng = center.lng();
-      const buffer = 0.01;
-
-      if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
-      if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
-      if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
-      if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
-
-      updateFormLocation(lat, lng);
-    }
+    setShowCreateForm(false); // Close any open form first
+    setTimeout(() => {
+      setShowCreateForm(true); // Open the form after resetting
+      if (mapRef.current) {
+        const center = mapRef.current.getCenter();
+        let lat = center.lat();
+        let lng = center.lng();
+        const buffer = 0.01;
+  
+        if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
+        if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
+        if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
+        if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
+  
+        updateFormLocation(lat, lng);
+      }
+    }, 100); // Small delay to force state update
   };
 
   const handleEditButtonClick = () => {

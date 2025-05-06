@@ -114,6 +114,7 @@ export default function Map() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [selectedEventId, setSelectedEventId] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [currentFilter, setCurrentFilter] = useState(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -245,7 +246,7 @@ export default function Map() {
       }
 
       // syncing events with frontend and backend
-      fetchEvents();
+      fetchAndFilterEvents(currentFilter);
     } catch (error) {
       alert(error.message);
     }
@@ -294,7 +295,7 @@ export default function Map() {
         ));
       }
 
-      fetchEvents();
+      fetchAndFilterEvents(currentFilter);
     } catch (error) {
       if (error.message.includes('not authorized')) {
         window.location.href = '/login?next=' + window.location.pathname;
@@ -325,51 +326,9 @@ export default function Map() {
     };
 
     handleToken();
-    fetchEvents();
+    fetchAndFilterEvents(currentFilter);
   }, [router]);
 
-  // getting all events
-  const fetchEvents = async () => {
-    try {
-      const response = await fetch(
-        `${backendUrl}/state`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to fetch events");
-
-      const data = await response.json();
-      if (data.state?.events) {
-        setMarkers(
-          data.state.events.map((event) => ({
-            lat: event.location.latitude,
-            lng: event.location.longitude,
-            title: event.title,
-            description: event.description,
-            startTime: event.startTime,
-            endTime: event.endTime,
-            category: event.category,
-            address: event.address,
-            capacity: event.capacity,
-            age_limit: event.age_limit,
-            image: event.image,
-            host: event.ownerEmail,
-            eventId: event.eventId,
-            rsvps: event.rsvps,
-            calendar_events: event.calendar_events || {}
-          }))
-        );
-      }
-    } catch (error) {
-      console.error("Error fetching events:", error);
-    }
-  };
 
   // setting a user to RSVP
   const handleRsvp = async (eventId) => {
@@ -526,7 +485,7 @@ export default function Map() {
         address: "",
       });
       alert("Event created successfully!");
-      fetchEvents();
+      fetchAndFilterEvents(currentFilter);
     } catch (error) {
       alert(error.message);
     }
@@ -586,7 +545,7 @@ export default function Map() {
         address: "",
       });
       alert("Event updated successfully!");
-      fetchEvents();
+      fetchAndFilterEvents(currentFilter);
     } catch (error) {
       alert(error.message);
     }
@@ -622,28 +581,34 @@ export default function Map() {
           (await response.json()).error || "Failed to delete event"
         );
       alert("Event deleted");
-      fetchEvents();
+      fetchAndFilterEvents(currentFilter);
     } catch (error) {
       alert(error.message);
     }
   }
 
-  // handles what filter to apply to events
-  const filterEvents = async (option) => {
+  const fetchAndFilterEvents = async (filterOption = null) => {
     try {
-      const response = await fetch(
-        `${backendUrl}/filter_events/${option}`,
-        {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
-
-      if (!response.ok) throw new Error("Failed to filter events");
-
+      let url = `${backendUrl}/state`;
+  
+      // If a filter is set, modify the URL to use the filtering endpoint
+      if (filterOption) {
+        url = `${backendUrl}/filter_events/${filterOption}`;
+        setCurrentFilter(filterOption);
+      } else {
+        setCurrentFilter(null);
+      }
+  
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+  
+      if (!response.ok) throw new Error("Failed to fetch events");
+  
       const data = await response.json();
       if (data.state?.events) {
         setMarkers(
@@ -662,13 +627,14 @@ export default function Map() {
             host: event.ownerEmail,
             eventId: event.eventId,
             rsvps: event.rsvps,
+            calendar_events: event.calendar_events || {},
           }))
         );
       }
     } catch (error) {
-      console.error("Error filtering events:", error);
+      console.error("Error fetching events:", error);
     }
-  }
+  };
 
   // handles filtering events by time
   const filterTimes = async (time) => {
@@ -873,13 +839,7 @@ export default function Map() {
             <select
               className={`w-full p-2 border rounded ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white' : ''}`}
               defaultValue=""
-              onChange={(e) => {
-                if (e.target.value === "") {
-                  fetchEvents()
-                } else {
-                  filterEvents(e.target.value)
-                }
-              }}
+              onChange={(e) => fetchAndFilterEvents(e.target.value || null)}
             >
               <option value="">All Categories</option>
               <option value="general">General</option>
@@ -964,11 +924,7 @@ export default function Map() {
                         `}
                   defaultValue=""
                   onChange={(e) => {
-                    if (e.target.value === "") {
-                      fetchEvents();
-                    } else {
-                      filterEvents(e.target.value);
-                    }
+                      fetchAndFilterEvents(e.target.value || null);
                     toggleMobileMenu();
                   }}
                 >

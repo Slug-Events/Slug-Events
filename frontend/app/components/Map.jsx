@@ -1,7 +1,6 @@
 "use client";
 
 import RsvpPanel from './RsvpPanel';
-import { Polyline } from "@react-google-maps/api";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -17,12 +16,6 @@ const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-398513784123.us-west1.run.app"
-
-const solidTransparentLineStyle = {
-  strokeColor: "#0000ff",
-  strokeOpacity: 0.3,
-  strokeWeight: 5,
-};
 
 // light/dark mode stuff
 const lightModeMap = [];

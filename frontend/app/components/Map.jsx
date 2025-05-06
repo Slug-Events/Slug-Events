@@ -1,7 +1,6 @@
 "use client";
 
 import RsvpPanel from './RsvpPanel';
-import { Polyline } from "@react-google-maps/api";
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
@@ -17,20 +16,6 @@ const libraries = ["places"];
 const mapContainerStyle = { width: "100%", height: "100%" };
 const center = { lat: 36.9741, lng: -122.0308 };
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-398513784123.us-west1.run.app"
-const bounds = { north: 37.19, south: 36.78, east: -121.63, west: -122.46 };
-const eventBounds = { north: 37.06, south: 36.78, east: -121.72, west: -122.34 };
-
-// creating the boundary line
-const LinePath = [
-  { lat: eventBounds.north, lng: -122.253512 }, // top-left
-  { lat: eventBounds.north, lng: eventBounds.east }, // top-right
-  { lat: eventBounds.south, lng: eventBounds.east }  // bottom-right
-];
-const solidTransparentLineStyle = {
-  strokeColor: "#0000ff",
-  strokeOpacity: 0.3,
-  strokeWeight: 5,
-};
 
 // light/dark mode stuff
 const lightModeMap = [];
@@ -748,18 +733,6 @@ export default function Map() {
     const lat = e.latLng.lat();
     const lng = e.latLng.lng();
 
-    // prevent clicks outside event bounds
-    if (
-      lat > eventBounds.north ||
-      lat < eventBounds.south ||
-      lng > eventBounds.east ||
-      lng < eventBounds.west
-    ) {
-
-      alert("You can't place an event outside the allowed area.\nPlease create an event closer to Santa Cruz.");
-      return;
-    }
-
     if (e.placeId) {
       return;
     }
@@ -809,12 +782,6 @@ export default function Map() {
         const center = mapRef.current.getCenter();
         let lat = center.lat();
         let lng = center.lng();
-        const buffer = 0.01;
-
-        if (lat > eventBounds.north - buffer) lat = eventBounds.north - buffer;
-        if (lat < eventBounds.south + buffer) lat = eventBounds.south + buffer;
-        if (lng > eventBounds.east - buffer) lng = eventBounds.east - buffer;
-        if (lng < eventBounds.west + buffer) lng = eventBounds.west + buffer;
 
         updateFormLocation(lat, lng);
       }
@@ -1065,14 +1032,9 @@ export default function Map() {
               }
             }}
             options={{
-              restriction: {
-                latLngBounds: bounds,
-                strictBounds: true,
-              },
               styles: isDarkMode ? darkModeMap : lightModeMap,
             }}
           >
-            <Polyline path={LinePath} options={solidTransparentLineStyle} />
 
             {markers.map((marker, index) => (
               <Marker
@@ -1091,31 +1053,9 @@ export default function Map() {
 
                   if (mapRef.current) {
                     const map = mapRef.current;
-                    const mapBounds = map.getBounds();
 
-                    if (mapBounds) {
-                      const buffer = 0.07; // moves the map slightly inward
-
-                      let newLat = marker.lat;
-                      let newLng = marker.lng;
-
-                      // check if the marker is too close to any boundary and adjust
-                      if (marker.lat >= bounds.north - buffer) {
-                        newLat -= buffer;
-                      }
-                      if (marker.lat <= bounds.south + buffer) {
-                        newLat += buffer;
-                      }
-                      if (marker.lng >= bounds.east - buffer) {
-                        newLng -= buffer;
-                      }
-                      if (marker.lng <= bounds.west + buffer) {
-                        newLng += buffer;
-                      }
-
-                      // move the map to the adjusted position
-                      map.panTo({ lat: newLat, lng: newLng });
-                    }
+                    // move the map to the adjusted position
+                      map.panTo({ lat: map.lat, lng: map.lng });
                   }
                 }}
               />

@@ -2,8 +2,8 @@
 from unittest.mock import MagicMock
 from datetime import datetime
 import pytest
+from flask import Flask
 from event import Event
-from app import app
 
 @pytest.fixture
 def mock_db():
@@ -32,5 +32,6 @@ def sample_event(request):
 @pytest.fixture(scope="module")
 def app_context():
     """Provides an application context required for database operations."""
-    with app.app_context():
+    test_app = Flask(__name__)
+    with test_app.app_context():
         yield

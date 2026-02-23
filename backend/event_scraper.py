@@ -51,6 +51,7 @@ def _clean_description(value: str | None) -> str | None:
         decoded,
         flags=re.IGNORECASE,
     )
+    decoded = re.sub(r"\s+\b(?:in|at|on|for|with|to)\s*$", "", decoded, flags=re.IGNORECASE)
     decoded = re.sub(r"\s+", " ", decoded).strip()
     return decoded or None
 

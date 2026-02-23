@@ -6,9 +6,13 @@ Flask backend for handling Google OAuth, database updates, and calendar integrat
 
 import os
 import secrets
+import hashlib
+import threading
 from datetime import datetime
+from time import sleep
 import jwt
 from dotenv import load_dotenv
+from dateutil import parser as date_parser
 
 from flask import Flask, redirect, url_for, session, request, jsonify
 from flask_cors import CORS
@@ -21,6 +25,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 from event import Event
+from event_scraper import scrape_upcoming_events, ScraperError
 from firebase_db import get_db
 from helpers import get_user_email, get_user_credentials, get_id
 
@@ -29,7 +34,6 @@ PORT = os.getenv("PORT", "8080")
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
 
-# getting relevant keys
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
 CORS(app, supports_credentials=True, origins=[FRONTEND_URL, f"{FRONTEND_URL}/map"])
@@ -51,6 +55,13 @@ app.config.update(
 SECRET_KEY = os.getenv("JWT_SECRET_KEY", "supersecurejwtkey")
 
 db = get_db()
+SCRAPED_SOURCE = os.getenv("SCRAPED_SOURCE_NAME", "external_upcoming_events")
+SCRAPED_OWNER_EMAIL = "system@slug-events.local"
+SCRAPED_DEFAULT_COORDS = {"latitude": 36.9741, "longitude": -122.0308}
+AUTO_SYNC_ENABLED = os.getenv("AUTO_SYNC_ENABLED", "1") == "1"
+AUTO_SYNC_INTERVAL_SECONDS = int(os.getenv("AUTO_SYNC_INTERVAL_SECONDS", "3600"))
+_auto_sync_thread = None
+_auto_sync_lock = threading.Lock()
 
 def get_google_flow():
     """Gets google login flow using env variables"""
@@ -73,25 +84,17 @@ def get_google_flow():
     )
 
 
-# if FRONTEND_URL is localhost http connection
-if FRONTEND_URL[:4] != "https":
+if FRONTEND_URL[:4] != "https" and BACKEND_URL[:4] != "https":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-def is_expired(event):
-    """Checks if an event is expired and updates Firestore if necessary."""
-    event_obj = event.to_dict()
+def _is_expired_event_obj(event_obj):
+    """Returns True if event endTime is in the past."""
     current_time = int(datetime.now().timestamp())
     end_time_obj = event_obj.get("endTime")
     if not end_time_obj:
         return False
     end_time = int(end_time_obj.timestamp())
-    if end_time < current_time:
-        event_ref = db.collection("events").document(event.id)
-        event_ref.update({"status": "expired"})  # update Firestore
-        print(f"Event {event.id} marked as expired.")
-        return True  # return True to indicate event is expired
-    return False  # event is still active
+    return end_time < current_time
 
 def create_calendar_event(event, credentials_dict):
     """Creates Google Calendar event from RSVP"""
@@ -136,6 +139,151 @@ def create_calendar_event(event, credentials_dict):
         print(f"Error creating calendar event: {e}")
         return None
 
+def _parse_scraped_datetime(value):
+    """Parse datetime from scraped text/ISO value."""
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        return value
+    try:
+        return date_parser.isoparse(value)
+    except (ValueError, TypeError):
+        return None
+
+def _scraped_doc_id(event_payload):
+    """Create a stable doc id so scraping updates existing docs instead of duplicating."""
+    unique_parts = [
+        event_payload.get("url") or "",
+        event_payload.get("title") or "",
+        event_payload.get("startTime") or "",
+    ]
+    unique_string = "|".join(unique_parts)
+    hashed = hashlib.sha1(unique_string.encode("utf-8")).hexdigest()[:24]
+    return f"scraped_{hashed}"
+
+def _scraped_event_to_firestore(raw_event):
+    """Map scraped event payload into the project's Firestore event schema."""
+    title = (raw_event.get("title") or "").strip()
+    if not title:
+        return None
+
+    start_time = _parse_scraped_datetime(raw_event.get("startTime"))
+    if not start_time:
+        return None
+
+    end_time = _parse_scraped_datetime(raw_event.get("endTime")) or start_time
+    if end_time < start_time:
+        end_time = start_time
+
+    location = raw_event.get("location") or {}
+    latitude = location.get("latitude")
+    longitude = location.get("longitude")
+
+    try:
+        latitude = float(latitude) if latitude is not None else None
+        longitude = float(longitude) if longitude is not None else None
+    except (TypeError, ValueError):
+        latitude = None
+        longitude = None
+
+    if latitude is None or longitude is None:
+        latitude = SCRAPED_DEFAULT_COORDS["latitude"]
+        longitude = SCRAPED_DEFAULT_COORDS["longitude"]
+
+    address = (
+        location.get("address")
+        or location.get("name")
+        or "Santa Cruz, CA"
+    )
+    description = raw_event.get("description") or "Scraped from external source"
+
+    return {
+        "title": title,
+        "description": description,
+        "startTime": start_time,
+        "endTime": end_time,
+        "address": address,
+        "location": {"latitude": latitude, "longitude": longitude},
+        "category": "community",
+        "capacity": None,
+        "age_limit": None,
+        "image": raw_event.get("image"),
+        "ownerEmail": SCRAPED_OWNER_EMAIL,
+        "createdAt": datetime.utcnow(),
+        "status": "active",
+        "source": "scraped",
+        "sourceName": SCRAPED_SOURCE,
+        "sourceUrl": raw_event.get("url"),
+    }
+
+def _is_restricted_category(category):
+    """Returns True when the category is reserved for scraped events only."""
+    return str(category or "").strip().lower() == "community"
+
+def sync_scraped_events_to_firestore():
+    """Scrape source events and upsert them into Firestore."""
+    scraped_data = scrape_upcoming_events()
+    raw_events = scraped_data.get("events", [])
+    synced_ids = set()
+
+    for raw_event in raw_events:
+        event_payload = _scraped_event_to_firestore(raw_event)
+        if not event_payload:
+            continue
+        event_id = _scraped_doc_id(raw_event)
+        db.collection("events").document(event_id).set(event_payload, merge=True)
+        synced_ids.add(event_id)
+
+    existing_scraped = (
+        db.collection("events")
+        .where(filter=FieldFilter("sourceName", "==", SCRAPED_SOURCE))
+        .stream()
+    )
+    for event_doc in existing_scraped:
+        if event_doc.id not in synced_ids:
+            db.collection("events").document(event_doc.id).set(
+                {"status": "expired"},
+                merge=True
+            )
+
+    return len(synced_ids)
+
+def _auto_sync_loop():
+    """Background loop that syncs scraped events on a fixed interval."""
+    while True:
+        try:
+            synced = sync_scraped_events_to_firestore()
+            print(f"Auto sync complete. Synced {synced} scraped events.")
+        except ScraperError as sync_error:
+            print(f"Auto sync scraper error: {sync_error}")
+        except Exception as sync_error:
+            print(f"Auto sync unexpected error: {sync_error}")
+        sleep(AUTO_SYNC_INTERVAL_SECONDS)
+
+def _start_auto_sync_thread():
+    """Starts the auto-sync worker once per process."""
+    global _auto_sync_thread
+    if not AUTO_SYNC_ENABLED:
+        return
+
+    if app.debug and os.environ.get("WERKZEUG_RUN_MAIN") != "true":
+        return
+
+    with _auto_sync_lock:
+        if _auto_sync_thread and _auto_sync_thread.is_alive():
+            return
+        _auto_sync_thread = threading.Thread(
+            target=_auto_sync_loop,
+            daemon=True,
+            name="scraped-events-auto-sync",
+        )
+        _auto_sync_thread.start()
+
+@app.before_request
+def ensure_auto_sync_started():
+    """Ensure auto-sync worker is running before serving requests."""
+    _start_auto_sync_thread()
+
 @app.route("/login")
 def login():
     """login endpoint"""
@@ -168,7 +316,6 @@ def authorize():
     flow = get_google_flow()
     flow.redirect_uri = app.config["GOOGLE_REDIRECT_URI"]
     flow.fetch_token(authorization_response=request.url)
-    # print(flow.credentials)
     auth_creds = flow.credentials
 
     try:
@@ -181,7 +328,6 @@ def authorize():
     except ValueError as e:
         return f"Failed to verify ID token: {str(e)}", 400
 
-    # store both user info and Google credentials in JWT token
     jwt_token = jwt.encode(
         {
             "user": {
@@ -222,9 +368,9 @@ def get_state():
             .where(filter=FieldFilter("status", "==", "active"))
             .stream())
         for event in events:
-            if is_expired(event):  # check if event recently expired
-                continue
             event_obj = event.to_dict()
+            if _is_expired_event_obj(event_obj):
+                continue
             event_obj["eventId"] = event.id
             state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
@@ -236,6 +382,8 @@ def create_event():
     """Endpoint for creating an event"""
     event = Event.request_to_event(db)
     assert isinstance(event, Event)
+    if _is_restricted_category(event.category):
+        return jsonify({"error": "Community category is reserved for scraped events"}), 403
 
     event_ref = event.create()
     doc = event_ref.get()
@@ -258,6 +406,8 @@ def update_event():
     old_event = Event.get(event_id, db)
     updated_event = Event.request_to_event(db)
     assert isinstance(updated_event, Event)
+    if _is_restricted_category(updated_event.category):
+        return jsonify({"error": "Community category is reserved for scraped events"}), 403
 
     if not old_event:
         return jsonify({"error": "Event not found"}), 404
@@ -332,16 +482,18 @@ def filter_events(option):
     """Endpoint for filtering displayed events by category"""
     try:
         print("FILTER OPTION:", option)
+        normalized_option = (option or "").strip().lower()
         state = {"events":[]}
         events = (
             db.collection("events")
             .where(filter=FieldFilter("status", "==", "active"))
             .stream())
         for event in events:
-            if is_expired(event):  # skip expired events
-                continue
             event_obj = event.to_dict()
-            if event_obj.get("category") == option:
+            if _is_expired_event_obj(event_obj):
+                continue
+            event_category = str(event_obj.get("category", "")).strip().lower()
+            if event_category == normalized_option:
                 event_obj["eventId"] = event.id
                 state["events"].append(event_obj)
         return jsonify({"status": 200, "state": state})
@@ -362,9 +514,9 @@ def filter_times(time):
             .where(filter=FieldFilter("status", "==", "active"))
             .stream())
         for event in events:
-            if is_expired(event):  # skip expired events
-                continue
             event_obj = event.to_dict()
+            if _is_expired_event_obj(event_obj):
+                continue
             start_time_obj = event_obj.get("startTime")
             end_time_obj = event_obj.get("endTime")
             start_time = int(start_time_obj.timestamp())
@@ -462,7 +614,6 @@ def remove_event_from_calendar(event_id):
     except Exception as e:
         print(f"Error removing calendar event: {e}")
         return jsonify({"error": f"Failed to remove calendar event: {str(e)}"}), 500
-
 
 if __name__ == "__main__":
     app.run(debug=True, host="localhost", port=8080)

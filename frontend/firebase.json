@@ -1,6 +1,18 @@
 {
   "hosting": {
     "public": "public",
+    "rewrites": [
+      {
+        "source": "**",
+        "run": {
+          "serviceId": "slug-events",
+          "region": "us-central1",
+          "cpu": 1,
+          "memory": "512Mi",
+          "maxInstances": 4
+        }
+      }
+    ],
     "ignore": [
       "firebase.json",
       "**/.*",

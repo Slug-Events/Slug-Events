@@ -43,3 +43,10 @@ button:hover {
   background-color: #444444;
   color: #ffffff;
 }
+
+/* Hide native clear controls on date/datetime inputs to avoid empty-state edge cases */
+input[type="date"]::-webkit-clear-button,
+input[type="datetime-local"]::-webkit-clear-button {
+  display: none;
+  -webkit-appearance: none;
+}

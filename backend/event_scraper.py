@@ -185,6 +185,76 @@ def _extract_events_from_json_ld(soup: BeautifulSoup) -> list[dict[str, Any]]:
                 events.append(event)
     return events
 
+def _extract_event_from_card(card) -> dict[str, Any] | None:  # pylint: disable=too-many-locals
+    title_link = card.select_one(
+        "a.tribe-events-calendar-list__event-title-link, h2 a, h3 a, h4 a, a"
+    )
+    title = _clean_text(title_link.get_text(strip=True) if title_link else None)
+    if not title:
+        return None
+
+    url = _clean_text(title_link.get("href") if title_link else None)
+
+    datetime_nodes = card.select(
+        "time, .tribe-event-date-start, .tribe-event-date-end, "
+        ".tribe-events-pro-photo__event-datetime"
+    )
+    datetimes = [
+        _clean_text(node.get("datetime") or node.get_text(" ", strip=True))
+        for node in datetime_nodes
+    ]
+    datetimes = [value for value in datetimes if value]
+    start_time = _parse_datetime(datetimes[0]) if datetimes else None
+    end_time = _parse_datetime(datetimes[1]) if len(datetimes) > 1 else None
+
+    location_text = None
+    location_latitude = None
+    location_longitude = None
+    location_node = card.select_one(
+        ".tribe-events-calendar-list__event-venue-title, "
+        ".tribe-events-pro-photo__event-venue, "
+        ".tribe-events-calendar-list__event-venue"
+    )
+    if location_node:
+        location_text = _clean_text(location_node.get_text(" ", strip=True))
+        latitude = location_node.get("data-lat")
+        longitude = location_node.get("data-lng")
+        try:
+            location_latitude = float(latitude) if latitude else None
+            location_longitude = float(longitude) if longitude else None
+        except (TypeError, ValueError):
+            location_latitude = None
+            location_longitude = None
+
+    description_node = card.select_one(
+        ".tribe-events-calendar-list__event-description, "
+        ".tribe-events-pro-photo__event-description, p"
+    )
+    description = _clean_text(
+        description_node.get_text(" ", strip=True) if description_node else None
+    )
+    description = _clean_description(description)
+
+    image_node = card.select_one("img")
+    image = _clean_text(
+        image_node.get("src") or image_node.get("data-src") if image_node else None
+    )
+
+    return {
+        "title": title,
+        "url": url,
+        "description": description,
+        "startTime": start_time,
+        "endTime": end_time,
+        "location": {
+            "name": location_text,
+            "address": None,
+            "latitude": location_latitude,
+            "longitude": location_longitude,
+        },
+        "image": image,
+    }
+
 
 def _extract_events_from_html_cards(soup: BeautifulSoup) -> list[dict[str, Any]]:
     card_selectors = [
@@ -203,77 +273,9 @@ def _extract_events_from_html_cards(soup: BeautifulSoup) -> list[dict[str, Any]]
 
     events: list[dict[str, Any]] = []
     for card in cards:
-        title_link = card.select_one(
-            "a.tribe-events-calendar-list__event-title-link, h2 a, h3 a, h4 a, a"
-        )
-        title = _clean_text(title_link.get_text(strip=True) if title_link else None)
-        if not title:
-            continue
-
-        url = _clean_text(title_link.get("href") if title_link else None)
-
-        datetime_nodes = card.select(
-            "time, .tribe-event-date-start, .tribe-event-date-end, "
-            ".tribe-events-pro-photo__event-datetime"
-        )
-        datetimes = [
-            _clean_text(node.get("datetime") or node.get_text(" ", strip=True))
-            for node in datetime_nodes
-        ]
-        datetimes = [value for value in datetimes if value]
-
-        start_time = _parse_datetime(datetimes[0]) if datetimes else None
-        end_time = _parse_datetime(datetimes[1]) if len(datetimes) > 1 else None
-
-        location_text = None
-        location_latitude = None
-        location_longitude = None
-        location_node = card.select_one(
-            ".tribe-events-calendar-list__event-venue-title, "
-            ".tribe-events-pro-photo__event-venue, "
-            ".tribe-events-calendar-list__event-venue"
-        )
-        if location_node:
-            location_text = _clean_text(location_node.get_text(" ", strip=True))
-            latitude = location_node.get("data-lat")
-            longitude = location_node.get("data-lng")
-            try:
-                location_latitude = float(latitude) if latitude else None
-                location_longitude = float(longitude) if longitude else None
-            except (TypeError, ValueError):
-                location_latitude = None
-                location_longitude = None
-
-        description_node = card.select_one(
-            ".tribe-events-calendar-list__event-description, "
-            ".tribe-events-pro-photo__event-description, p"
-        )
-        description = _clean_text(
-            description_node.get_text(" ", strip=True) if description_node else None
-        )
-        description = _clean_description(description)
-
-        image_node = card.select_one("img")
-        image = _clean_text(
-            image_node.get("src") or image_node.get("data-src") if image_node else None
-        )
-
-        events.append(
-            {
-                "title": title,
-                "url": url,
-                "description": description,
-                "startTime": start_time,
-                "endTime": end_time,
-                "location": {
-                    "name": location_text,
-                    "address": None,
-                    "latitude": location_latitude,
-                    "longitude": location_longitude,
-                },
-                "image": image,
-            }
-        )
+        parsed_event = _extract_event_from_card(card)
+        if parsed_event:
+            events.append(parsed_event)
 
     return events
 

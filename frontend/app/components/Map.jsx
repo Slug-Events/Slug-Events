@@ -1,7 +1,7 @@
 "use client";
 
 import RsvpPanel from './RsvpPanel';
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { jwtDecode } from "jwt-decode";
 import {
@@ -21,6 +21,7 @@ const santaCruzBounds = {
   west: -122.26,
   east: -121.85,
 };
+const REQUIRED_FIELDS = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
 const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "https://slug-events-398513784123.us-west1.run.app"
 
 // light/dark mode stuff
@@ -133,19 +134,18 @@ export default function Map() {
     age_limit: "",
     image: ""
   });
-  const requiredFields = ['address', 'title', 'startTime', 'endTime', 'category', 'description'];
   // checking the event creation fields
-  const areRequiredFieldsFilled = () => {
+  const areRequiredFieldsFilled = useCallback(() => {
     const startTime = new Date(formData.startTime);
     const endTime = new Date(formData.endTime);
     const currentTime = new Date();
 
-    return requiredFields.every(field => formData[field] && formData[field].trim() !== '' && startTime >= currentTime && endTime > startTime);
-  };
+    return REQUIRED_FIELDS.every(field => formData[field] && formData[field].trim() !== '' && startTime >= currentTime && endTime > startTime);
+  }, [formData]);
   const [isFormValid, setIsFormValid] = useState(false);
   useEffect(() => {
     setIsFormValid(areRequiredFieldsFilled());
-  }, [formData]);
+  }, [areRequiredFieldsFilled]);
 
   const autocompleteRef = useRef(null);
   const geocoder = useRef(null);
@@ -333,7 +333,7 @@ export default function Map() {
     };
 
     handleToken();
-    fetchAndFilterEvents(currentFilter);
+    fetchAndFilterEvents();
   }, [router]);
 
 
